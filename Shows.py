@@ -68,7 +68,25 @@ def getMovies():
 	conn.commit()
 	return c.fetchall()
 
-async def arrowPages(context,pages):
+async def arrowPages(context,movies):
+	pages = []
+	count = 0
+	page = 0
+	while count != len(movies):
+			page += 1
+			message = "Page: "+str(page)+"\n"
+			for x in range(0,10):
+				episode = movies[count][2]
+				season = movies[count][1]
+				title = movies[count][0]
+				count += 1
+				if season == None:
+					message = message+"	"+title+"\n"
+				else:
+					message = message+"	"+title+ " Season: " +str(season)+ " Episode: " +str(episode)+"\n"
+				if count == len(movies):
+					break
+			pages.append(message)
 	page = 0
 	msg = await client.say(pages[page])
 	await client.add_reaction(msg, "◀")
@@ -117,7 +135,7 @@ async def add(context):
 		await client.say("You are already added to the system, " + context.message.author.mention)
 
 #User can request for new titles to be added
-@client.command(description="Request for a movie/tv/anime to be added. (?request MESSAGE)",brief="Request for a movie/tv/anime to be added.",pass_context=True, aliases=["Request"])
+@client.command(description="Request for a movie/tv to be added. (?request MESSAGE)",brief="Request for a movie/tv to be added.",pass_context=True, aliases=["Request"])
 async def request(context, *args):
 	message = " ".join(args)
 	await client.send_message(discord.Object(id='530921755955691530'),context.message.author.mention+" "+message)
@@ -186,86 +204,30 @@ async def watched(context):
 		elif re.match("(<@)[0-9]*(>)",a[1]):#For users without nicknames.
 			short = a[1][2:len(a[1])-1]
 		movies = getWatchedID(short)
-		pages = []
-		count = 0
-		page = 0
 		await client.say(a[1]+" has watched:\n")
-		while count != len(movies):
-			page += 1
-			message = "Page: "+str(page)+"\n"
-			for x in range(0,10):
-				episode = movies[count][2]
-				season = movies[count][1]
-				title = movies[count][0]
-				count += 1
-				if season == None:
-					message = message+"	"+title+"\n"
-				else:
-					message = message+"	"+title+ " Season: " +str(season)+ " Episode: " +str(episode)+"\n"
-				if count == len(movies):
-					break
-			pages.append(message)
 	except:
 		movies = getWatchedID(context.message.author.id)
-		pages = []
-		count = 0
-		page = 0
 		await client.say("You have watched:\n")
-		while count != len(movies):
-			page += 1
-			message = "Page: "+str(page)+"\n"
-			for x in range(0,10):
-				episode = movies[count][2]
-				season = movies[count][1]
-				title = movies[count][0]
-				count += 1
-				if season == None:
-					message = message+"	"+title+"\n"
-				else:
-					message = message+"	"+title+ " Season: " +str(season)+ " Episode: " +str(episode)+"\n"
-				if count == len(movies):
-					break
-			pages.append(message)
-	await arrowPages(context,pages)
+	await arrowPages(context,movies)
 
 #Lists all movie entrys to database.
-@client.command(description="Lists all movies/tv/anime in databse. (?list)",brief="Lists all movies/tv/anime in databse.",pass_context=True, aliases=["List"])
+@client.command(description="Lists all movies/tv in databse. (?list)",brief="Lists all movies/tv in databse.",pass_context=True, aliases=["List"])
 async def list(context):
 	movies = getMovies()
-	pages = []
-	count = 0
-	page = 0
-	while count != len(movies):
-		page += 1
-		message = "Page: "+str(page)+"\n"
-		for i in range(0,10):
-			episode = movies[count][2]
-			season = movies[count][1]
-			title = movies[count][0]
-			count += 1
-			if season == None:
-				message = message+"	"+title+"\n"
-			else:
-				message = message+"	"+title+ " Season: " +str(season)+ " Episode: " +str(episode)+"\n"
-			if count == len(movies):
-				break
-		pages.append(message)
-	await arrowPages(context,pages)
+	await arrowPages(context,movies)
 
-#Terminates the bot only if they have the role Owner.
+#Changes the bot to the maintenance version.
 @commands.has_role("Owner")
-@client.command(hidden=True,pass_context=True, aliases=["Shutdown"])
-async def shutdown(context):
-	await client.say("Bye.")
+@client.command(hidden=True,pass_context=True, aliases=["Switch"])
+async def switch(context):
 	await client.close()
 	print("Changing to maintenance version")
 	os.system('python3 Down.py')
 
 #Terminates the bot only if they have the role Owner.
 @commands.has_role("Owner")
-@client.command(hidden=True,pass_context=True, aliases=["End"])
-async def end(context):
-	await client.say("Bye.")
+@client.command(hidden=True,pass_context=True, aliases=["Shutdown"])
+async def shutdown(context):
 	await client.close()
 
 #List all emojis in python terminal.
@@ -275,11 +237,6 @@ async def all(context):
 	test = client.get_all_emojis()
 	while True:
 		print(next(test))
-
-#Place holder.
-@client.command(hidden=True,pass_context=True)
-async def temp(context):
-	await client.say("<:TONY:269113698923053056>")
 
 #Gets the id of emoji.
 @commands.has_role("Owner")

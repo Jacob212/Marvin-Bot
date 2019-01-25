@@ -25,13 +25,20 @@ async def on_ready():
 async def on_command_error(error,context):
 	await client.send_message(context.message.channel,context.message.author.mention+" Sorry, The bot is down for maintenance")
 
-#Terminates the bot only if they have the role Owner.
+#Changes the bot to the live version.
 @commands.has_role("Owner")
 @client.command(hidden=True,pass_context=True, aliases=["Start"])
 async def start(context):
-	await client.say("Turning on now!")
 	await client.close()
 	print("Changing to live version")
 	os.system('python3 Shows.py')
+
+#Terminates the bot only if they have the role Owner.
+@commands.has_role("Owner")
+@client.command(hidden=True,pass_context=True, aliases=["Shutdown"])
+async def shutdown(context):
+	await client.say("Bye.")
+	await client.close()
+
 
 client.run(TOKEN)
