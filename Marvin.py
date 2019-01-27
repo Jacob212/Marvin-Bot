@@ -120,7 +120,21 @@ async def on_ready():
 	print('------')
 	await client.change_presence(game=Game(name="?help"))
 
-Catches command errors. (check error)
+#logs when the bot has been invited to a server
+@client.event
+async def on_server_join(server):
+	embed = discord.Embed(title="Marvin has joined: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color=0x00ff00)
+	embed.set_thumbnail(url=str(server.icon_url))
+	await client.send_message(discord.Object(id='538719054479884300'),embed=embed)
+
+#logs when the bot has been kicked from a server
+@client.event
+async def on_server_remove(server):
+	embed = discord.Embed(title="Marvin has been removed from: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color=0x00ff00)
+	embed.set_thumbnail(url=str(server.icon_url))
+	await client.send_message(discord.Object(id='538719054479884300'),embed=embed)
+
+#Catches command errors. (check error)
 @client.event
 async def on_command_error(error,context):#The check functions for command shutdown failed.
 	print(error)
