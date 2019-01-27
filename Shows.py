@@ -69,7 +69,10 @@ def getMovies():
 	return c.fetchall()
 
 def is_me(context):
-  return context.message.author.id == "130470072190894082"
+	return context.message.author.id == "130470072190894082"
+
+def getID(discord):
+	return re.findall('\d+',discord)[0]
 
 async def arrowPages(context,movies):
 	pages = []
@@ -91,7 +94,7 @@ async def arrowPages(context,movies):
 					break
 			pages.append(message)
 	page = 0
-	msg = await client.say(pages[page])
+	msg = await client.say(pages[page],delete_after=60)
 	await client.add_reaction(msg, "◀")
 	await client.add_reaction(msg, "▶")
 	while True:
@@ -117,37 +120,41 @@ async def on_ready():
 	print('------')
 	await client.change_presence(game=Game(name="?help"))
 
-#Catches command errors. (check error)
+Catches command errors. (check error)
 @client.event
 async def on_command_error(error,context):#The check functions for command shutdown failed.
 	print(error)
 	if error.args[0] == "The check functions for command shutdown failed.":
-		await client.send_message(context.message.channel,"You cant access this command."+context.message.author.mention)
+		msg = await client.send_message(context.message.channel,"You cant access this command."+context.message.author.mention)
 	elif error.args[0] == "The check functions for command new failed.":
-		await client.send_message(context.message.channel,"You can not add new titles. You must request them to be added. (?request MESSAGE)"+context.message.author.mention)
+		msg = await client.send_message(context.message.channel,"You can not add new titles. You must request them to be added. (?request MESSAGE)"+context.message.author.mention)
 	else:
-		await client.send_message(context.message.channel,"You either dont have access to the command or you have entered something wrong."+context.message.author.mention)
+		msg = await client.send_message(context.message.channel,"You either dont have access to the command or you have entered something wrong."+context.message.author.mention)
+	await asyncio.sleep(10)
+	await client.delete_message(msg)
 
 #Adds user to database
 @client.command(description="Adds you to bot database. (?add)",brief="Adds you to bot database.",pass_context=True, aliases=["Add"])
 async def add(context):
 	try:
 		new_member(str(context.message.author.id),str(context.message.author))
-		await client.say("Added to system, " + context.message.author.mention)
+		await client.say("Added to system, " + context.message.author.mention,delete_after=10)
 	except:
-		await client.say("You are already added to the system, " + context.message.author.mention)
+		await client.say("You are already added to the system, " + context.message.author.mention,delete_after=10)
+	await client.delete_message(context.message)
 
 #User can request for new titles to be added
 @client.command(description="Request for a movie/tv to be added. (?request MESSAGE)",brief="Request for a movie/tv to be added.",pass_context=True, aliases=["Request"])
 async def request(context, *args):
 	message = " ".join(args)
 	await client.send_message(discord.Object(id='538720732499410968'),context.message.author.mention+" "+message)
-	await client.say("Your request has been logged")
+	await client.say("Your request has been logged",delete_after=10)
 
 #Adds new title to database. only works for shows not movies.
 @commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["New"])
 async def new(context,*args):
+	await client.delete_message(context.message)
 	try:
 		try:
 			episodes = args[-1]
@@ -172,17 +179,21 @@ async def new(context,*args):
 			else:
 				await client.edit_message(msg,"That is not a valid response "+ context.message.author.mention)
 			await client.clear_reactions(msg)
+			await asyncio.sleep(10)
+			await client.delete_message(msg)
 			break
 	except Exception as e:
 		print(e)
-		await client.say("The title has already been added or the wrong data was entered, (?new TITLE season# ep#) " + context.message.author.mention)
+		await client.say("The title has already been added or the wrong data was entered, (?new TITLE season# ep#) " + context.message.author.mention,delete_after=10)
 
 #Adds or updates the users watch list in database.
 @client.command(description="Use when you want to save what movie or episode you have watched. (?watch TITLE season# episode#)",brief="Use when you want to save what movie or episode you have watched.",pass_context=True, aliases=["Watch"])
 async def watch(context,*args):
+	await client.delete_message(context.message)
 	try:
 		episode = args[-1]
 		season = args[-2]
+		int(season)#checks to see if there is a season and episode number saved. If there isnt then it should be a movie
 		int(episode)
 		title = " ".join(args[0:-2])
 	except:
@@ -195,27 +206,25 @@ async def watch(context,*args):
 		updateWatched(str(context.message.author.id),title,episode)
 	else:
 		new_watched(userID,movieID,episode)
-	await client.say("Your watched list has been updated "+context.message.author.mention)
+	await client.say("Your watched list has been updated "+context.message.author.mention,delete_after=10)
 
 #Gets watched list from database
 @client.command(description="Used to check what someone has watched. (?watched or ?watched mention)",brief="Used to check what someone has watched.",pass_context=True, aliases=["Watched"])
-async def watched(context):
+async def watched(context, *arg):
+	await client.delete_message(context.message)
 	try:
-		a = context.message.content.split(" ")
-		if re.match("(<@!)[0-9]*(>)",a[1]):#For users with nicknames.
-			short = a[1][3:len(a[1])-1]
-		elif re.match("(<@)[0-9]*(>)",a[1]):#For users without nicknames.
-			short = a[1][2:len(a[1])-1]
-		movies = getWatchedID(short)
-		await client.say(a[1]+" has watched:\n")
-	except:
+		movies = getWatchedID(getID(arg))
+		await client.say(arg+" has watched:\n",delete_after=60)
+	except Exception as e:
+		print(e)
 		movies = getWatchedID(context.message.author.id)
-		await client.say("You have watched:\n")
+		await client.say("You have watched:\n",delete_after=60)
 	await arrowPages(context,movies)
 
 #Lists all movie entrys to database.
 @client.command(description="Lists all movies/tv in databse. (?list)",brief="Lists all movies/tv in databse.",pass_context=True, aliases=["List"])
 async def list(context):
+	await client.delete_message(context.message)
 	movies = getMovies()
 	await arrowPages(context,movies)
 
@@ -223,6 +232,7 @@ async def list(context):
 @commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["Switch"])
 async def switch(context):
+	await client.delete_message(context.message)
 	await client.close()
 	print("Changing to maintenance version")
 	os.system('python3 Down.py')
@@ -231,20 +241,14 @@ async def switch(context):
 @commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["Shutdown"])
 async def shutdown(context):
+	await client.delete_message(context.message)
 	await client.close()
-
-#List all emojis in python terminal.
-@commands.check(is_me)
-@client.command(hidden=True,pass_context=True)
-async def all(context):
-	test = client.get_all_emojis()
-	while True:
-		print(next(test))
 
 #Gets the id of emoji.
 @commands.check(is_me)
 @client.command(hidden=True,pass_context=True)
 async def get(context, *args):
+	await client.delete_message(context.message)
 	print(args)
 
 client.run(TOKEN)
