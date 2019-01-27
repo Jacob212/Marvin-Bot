@@ -31,7 +31,7 @@ async def on_command_error(error,context):
 async def start(context):
 	await client.close()
 	print("Changing to live version")
-	os.system('python3 Shows.py')
+	os.system('python3 Marvin.py')
 
 #Terminates the bot only if they have the role Owner.
 @commands.has_role("Owner")
