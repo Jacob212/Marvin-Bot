@@ -68,6 +68,9 @@ def getMovies():
 	conn.commit()
 	return c.fetchall()
 
+def is_me(context):
+  return context.message.author.id == "130470072190894082"
+
 async def arrowPages(context,movies):
 	pages = []
 	count = 0
@@ -138,11 +141,11 @@ async def add(context):
 @client.command(description="Request for a movie/tv to be added. (?request MESSAGE)",brief="Request for a movie/tv to be added.",pass_context=True, aliases=["Request"])
 async def request(context, *args):
 	message = " ".join(args)
-	await client.send_message(discord.Object(id='530921755955691530'),context.message.author.mention+" "+message)
+	await client.send_message(discord.Object(id='538720732499410968'),context.message.author.mention+" "+message)
 	await client.say("Your request has been logged")
 
 #Adds new title to database. only works for shows not movies.
-@commands.has_role("Owner")
+@commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["New"])
 async def new(context,*args):
 	try:
@@ -217,7 +220,7 @@ async def list(context):
 	await arrowPages(context,movies)
 
 #Changes the bot to the maintenance version.
-@commands.has_role("Owner")
+@commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["Switch"])
 async def switch(context):
 	await client.close()
@@ -225,13 +228,13 @@ async def switch(context):
 	os.system('python3 Down.py')
 
 #Terminates the bot only if they have the role Owner.
-@commands.has_role("Owner")
+@commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["Shutdown"])
 async def shutdown(context):
 	await client.close()
 
 #List all emojis in python terminal.
-@commands.has_role("Owner")
+@commands.check(is_me)
 @client.command(hidden=True,pass_context=True)
 async def all(context):
 	test = client.get_all_emojis()
@@ -239,7 +242,7 @@ async def all(context):
 		print(next(test))
 
 #Gets the id of emoji.
-@commands.has_role("Owner")
+@commands.check(is_me)
 @client.command(hidden=True,pass_context=True)
 async def get(context, *args):
 	print(args)
