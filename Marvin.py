@@ -82,7 +82,13 @@ def is_me(context):
 def getID(discord):
 	return re.findall('\d+',discord)[0]
 
-async def arrowPages(context,movies):
+def didReact(users,author):
+	for i in range(len(users)):
+		if users[i] == author:
+			return True
+	return False
+
+async def arrowPages(context,movies,msg2):
 	pages = []
 	count = 0
 	page = 0
@@ -102,11 +108,23 @@ async def arrowPages(context,movies):
 					break
 			pages.append(message)
 	page = 0
-	msg = await client.say(pages[page],delete_after=60)
+	msg = await client.say(pages[page])
 	await client.add_reaction(msg, "◀")
 	await client.add_reaction(msg, "▶")
+	client.loop.create_task(delete(context,msg,msg2))
 	while True:
 		res = await client.wait_for_reaction(["▶", "◀"], message=msg,user=context.message.author)
+		cache_msg = discord.utils.get(client.messages, id=msg.id)
+		users_1 = await client.get_reaction_users(cache_msg.reactions[0])
+		users_2 = await client.get_reaction_users(cache_msg.reactions[1])
+		if didReact(users_1,context.message.author) == True:
+			print("left-true")
+		else:
+			print("left-false")
+		if didReact(users_2,context.message.author) == True:
+			print("right-true")
+		else:
+			print("right-false")
 		if res.reaction.emoji == "▶" and page <= (len(pages)-2):
 			page += 1
 			await client.edit_message(msg,pages[page])
@@ -130,6 +148,19 @@ async def change_status():
 		await client.change_presence(game=discord.Game(name=next(msgs)))
 		await asyncio.sleep(10)
 
+#Sames as delete_after attribute but works for varying times. e.g. timer resets after someone reacts
+async def delete(context,msg,header=None):
+	count = 0
+	while count != 10:
+		count += 1
+		leftUsers = await client.get_reaction_users(discord.utils.get(client.messages, id=msg.id).reactions[0])
+		rightUsers = await client.get_reaction_users(discord.utils.get(client.messages, id=msg.id).reactions[1])
+		await asyncio.sleep(1)
+		if didReact(leftUsers,context.message.author) == True or didReact(rightUsers,context.message.author) == True:
+			count = 0
+	await client.delete_message(msg)
+	if header != None:
+		await client.delete_message(header)
 
 client = commands.Bot(command_prefix="?")
 
@@ -252,12 +283,12 @@ async def watched(context, *arg):
 	await client.delete_message(context.message)
 	try:
 		movies = getWatchedID(getID(arg))
-		await client.say(arg+" has watched:\n",delete_after=60)
+		msg2 = await client.say(arg+" has watched:\n")
 	except Exception as e:
 		print(e)
 		movies = getWatchedID(context.message.author.id)
-		await client.say("You have watched:\n",delete_after=60)
-	await arrowPages(context,movies)
+		msg2 = await client.say("You have watched:\n")
+	await arrowPages(context,movies,msg2)
 
 #Lists all movie entrys to database.
 @client.command(description="Lists all movies/tv in databse. (?list)",brief="Lists all movies/tv in databse.",pass_context=True, aliases=["List"])
