@@ -272,7 +272,7 @@ async def switch(context):
 	await client.delete_message(context.message)
 	await client.close()
 	print("Changing to maintenance version")
-	os.system('python3 Down.py')
+	os.system('python Down.py')
 
 #Terminates the bot only if they have the role Owner.
 @commands.check(is_me)
