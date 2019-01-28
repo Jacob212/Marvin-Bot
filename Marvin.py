@@ -140,7 +140,7 @@ async def change_status():
 #Sames as delete_after attribute but works for varying times. e.g. timer resets after someone reacts
 async def delete(context,msg,header=None):
 	count = 0
-	while count != 10:
+	while count != 60:
 		count += 1
 		leftUsers = await client.get_reaction_users(discord.utils.get(client.messages, id=msg.id).reactions[0])
 		rightUsers = await client.get_reaction_users(discord.utils.get(client.messages, id=msg.id).reactions[1])
