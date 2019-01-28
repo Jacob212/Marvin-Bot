@@ -88,7 +88,7 @@ def didReact(users,author):
 			return True
 	return False
 
-async def arrowPages(context,movies,msg2):
+async def arrowPages(context,movies,msg2=None):
 	pages = []
 	count = 0
 	page = 0
@@ -114,17 +114,6 @@ async def arrowPages(context,movies,msg2):
 	client.loop.create_task(delete(context,msg,msg2))
 	while True:
 		res = await client.wait_for_reaction(["▶", "◀"], message=msg,user=context.message.author)
-		cache_msg = discord.utils.get(client.messages, id=msg.id)
-		users_1 = await client.get_reaction_users(cache_msg.reactions[0])
-		users_2 = await client.get_reaction_users(cache_msg.reactions[1])
-		if didReact(users_1,context.message.author) == True:
-			print("left-true")
-		else:
-			print("left-false")
-		if didReact(users_2,context.message.author) == True:
-			print("right-true")
-		else:
-			print("right-false")
 		if res.reaction.emoji == "▶" and page <= (len(pages)-2):
 			page += 1
 			await client.edit_message(msg,pages[page])
