@@ -1,7 +1,7 @@
 from discord import Game
 from discord.ext import commands
 from discord.utils import get
-
+from itertools import cycle
 import asyncio
 import sqlite3
 import re
@@ -68,6 +68,14 @@ def getMovies():
 	conn.commit()
 	return c.fetchall()
 
+def getLastFive():
+	c.execute('''SELECT Title,Season FROM Movies ORDER BY MovieID DESC LIMIT 0,5''')
+	conn.commit()
+	return c.fetchall()
+
+
+
+
 def is_me(context):
 	return context.message.author.id == "130470072190894082"
 
@@ -108,6 +116,21 @@ async def arrowPages(context,movies):
 		await client.remove_reaction(msg, "▶", context.message.author)
 		await client.remove_reaction(msg, "◀", context.message.author)
 
+async def change_status():
+	await client.wait_until_ready()
+	games = getLastFive()
+	status = []
+	for x in range(0,5):
+		if games[x][1] == None:
+			status.append(games[x][0])
+		else:
+			status.append(games[x][0]+" Season "+str(games[x][1]))
+	msgs = cycle(status)
+	while not client.is_closed:
+		await client.change_presence(game=discord.Game(name=next(msgs)))
+		await asyncio.sleep(10)
+
+
 client = commands.Bot(command_prefix="?")
 
 #Sets the played game status and prints that bot is logged in when ready.
@@ -118,19 +141,19 @@ async def on_ready():
 	print(client.user.name)
 	print(client.user.id)
 	print('------')
-	await client.change_presence(game=Game(name="?help"))
+	#await client.change_presence(game=Game(name="?help"))
 
 #logs when the bot has been invited to a server
 @client.event
 async def on_server_join(server):
-	embed = discord.Embed(title="Marvin has joined: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color=0x00ff00)
+	embed = discord.Embed(title=str(client.user)+" has joined: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color= 16727013)
 	embed.set_thumbnail(url=str(server.icon_url))
 	await client.send_message(discord.Object(id='538719054479884300'),embed=embed)
 
 #logs when the bot has been kicked from a server
 @client.event
 async def on_server_remove(server):
-	embed = discord.Embed(title="Marvin has been removed from: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color=0x00ff00)
+	embed = discord.Embed(title=str(client.user)+" has been removed from: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color= 16727013)
 	embed.set_thumbnail(url=str(server.icon_url))
 	await client.send_message(discord.Object(id='538719054479884300'),embed=embed)
 
@@ -265,6 +288,7 @@ async def get(context, *args):
 	await client.delete_message(context.message)
 	print(args)
 
+client.loop.create_task(change_status())
 client.run(TOKEN)
 c.close()
 conn.close()
