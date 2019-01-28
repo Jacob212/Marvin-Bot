@@ -155,12 +155,13 @@ async def on_server_join(server):
 async def on_server_remove(server):
 	embed = discord.Embed(title=str(client.user)+" has been removed from: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color= 16727013)
 	embed.set_thumbnail(url=str(server.icon_url))
-	await client.send_message(discord.Object(id='538719054479884300'),embed=embed)
+	await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
 
 #Catches command errors. (check error)
 @client.event
 async def on_command_error(error,context):#The check functions for command shutdown failed.
-	print(error)
+	embed = discord.Embed(title=str(context.message.author)+"			"+str(context.message.content),description=str(error))
+	await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
 	if error.args[0] == "The check functions for command shutdown failed.":
 		msg = await client.send_message(context.message.channel,"You cant access this command."+context.message.author.mention)
 	elif error.args[0] == "The check functions for command new failed.":
