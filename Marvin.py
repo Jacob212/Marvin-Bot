@@ -88,7 +88,7 @@ def didReact(users,author):
 			return True
 	return False
 
-async def arrowPages(context,movies,msg2=None):
+async def arrowPages(context,movies,header=None):
 	pages = []
 	count = 0
 	page = 0
@@ -107,21 +107,24 @@ async def arrowPages(context,movies,msg2=None):
 				if count == len(movies):
 					break
 			pages.append(message)
-	page = 0
-	msg = await client.say(pages[page])
-	await client.add_reaction(msg, "◀")
-	await client.add_reaction(msg, "▶")
-	client.loop.create_task(delete(context,msg,msg2))
-	while True:
-		res = await client.wait_for_reaction(["▶", "◀"], message=msg,user=context.message.author)
-		if res.reaction.emoji == "▶" and page <= (len(pages)-2):
-			page += 1
-			await client.edit_message(msg,pages[page])
-		elif res.reaction.emoji == "◀" and page != 0:
-			page -= 1
-			await client.edit_message(msg,pages[page])
-		await client.remove_reaction(msg, "▶", context.message.author)
-		await client.remove_reaction(msg, "◀", context.message.author)
+	if not pages:
+		await client.say("You have not added anything you have watched to the system yet",delete_after=10)
+	else:
+		page = 0
+		msg = await client.say(pages[page])
+		await client.add_reaction(msg, "◀")
+		await client.add_reaction(msg, "▶")
+		client.loop.create_task(delete(context,msg,header))
+		while True:
+			res = await client.wait_for_reaction(["▶", "◀"], message=msg,user=context.message.author)
+			if res.reaction.emoji == "▶" and page <= (len(pages)-2):
+				page += 1
+				await client.edit_message(msg,pages[page])
+			elif res.reaction.emoji == "◀" and page != 0:
+				page -= 1
+				await client.edit_message(msg,pages[page])
+			await client.remove_reaction(msg, "▶", context.message.author)
+			await client.remove_reaction(msg, "◀", context.message.author)
 
 async def change_status():
 	await client.wait_until_ready()
@@ -180,16 +183,23 @@ async def on_server_remove(server):
 #Catches command errors. (check error)
 @client.event
 async def on_command_error(error,context):#The check functions for command shutdown failed.
-	embed = discord.Embed(title=str(context.message.author)+"			"+str(context.message.content),description=str(error))
-	await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
-	if error.args[0] == "The check functions for command shutdown failed.":
-		msg = await client.send_message(context.message.channel,"You cant access this command."+context.message.author.mention)
-	elif error.args[0] == "The check functions for command new failed.":
-		msg = await client.send_message(context.message.channel,"You can not add new titles. You must request them to be added. (?request MESSAGE)"+context.message.author.mention)
-	else:
+	if isinstance(error, commands.NoPrivateMessage):
+    await bot.send_message(context.message.channel, "**private messages.** " + context.message.author.mention)
+  if isinstance(error, commands.MissingRequiredArgument):
+    await bot.send_message(context.message.channel, "**Missing an argument.** " + context.message.author.mention)
+  elif isinstance(error, commands.DisabledCommand):
+    await bot.send_message(context.message.channel, "** Command is disabled.** " + context.message.author.mention)
+  elif isinstance(error, commands.CheckFailure):
+    await bot.send_message(context.message.channel, "**no permission.** " + context.message.author.mention)
+  elif isinstance(error, commands.CommandNotFound):
+    await bot.send_message(context.message.channel, "**wrong command.** " + context.message.author.mention)
+  else:
+		embed = discord.Embed(title=str(context.message.author)+"			"+str(context.message.content),description=str(error))
+		await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
 		msg = await client.send_message(context.message.channel,"You either dont have access to the command or you have entered something wrong."+context.message.author.mention)
-	await asyncio.sleep(10)
-	await client.delete_message(msg)
+		await asyncio.sleep(10)
+		await client.delete_message(msg)
+		
 
 #Adds user to database
 @client.command(description="Adds you to bot database. (?add)",brief="Adds you to bot database.",pass_context=True, aliases=["Add"])
@@ -273,8 +283,7 @@ async def watched(context, *arg):
 	try:
 		movies = getWatchedID(getID(arg))
 		msg2 = await client.say(arg+" has watched:\n")
-	except Exception as e:
-		print(e)
+	except:
 		movies = getWatchedID(context.message.author.id)
 		msg2 = await client.say("You have watched:\n")
 	await arrowPages(context,movies,msg2)
