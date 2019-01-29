@@ -40,7 +40,6 @@ async def start(context):
 @commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["Shutdown"])
 async def shutdown(context):
-  await client.say("Bye.")
   await client.close()
 
 
