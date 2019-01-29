@@ -73,8 +73,6 @@ def getLastFive():
   conn.commit()
   return c.fetchall()
 
-
-
 #checks to see if user is me
 def is_me(context):
   return context.message.author.id == "130470072190894082"
@@ -87,6 +85,29 @@ def didReact(users,author):
     if users[i] == author:
       return True
   return False
+
+#class for sorting out the user settings for watched and list.
+class settings():
+  def __init__(self,args):
+    self.movie = False
+    self.tv = False
+    self.anime = False
+    self.id = None
+    self.mention = None
+    self.genres = []
+    for arg in args:
+      if arg == "movie" or arg == "Movie":
+        self.movie = True
+      elif arg == "tv" or arg == "TV":
+        self.tv = True
+      elif arg == "anime" or arg == "Anime":
+        self.anime = True
+      elif re.match("(<@!?)[0-9]*(>)",arg):
+        self.id = re.findall('\d+',arg)[0]
+        self.mention = arg
+      else:
+        self.genres.append(arg.lower())
+
 
 async def arrowPages(context,movies,header=None):
   pages = []
@@ -126,6 +147,7 @@ async def arrowPages(context,movies,header=None):
       await client.remove_reaction(msg, "▶", context.message.author)
       await client.remove_reaction(msg, "◀", context.message.author)
 
+#Updates the bots playing status with the last 5 titles that were added to the database
 async def change_status():
   await client.wait_until_ready()
   games = getLastFive()
@@ -180,7 +202,7 @@ async def on_server_remove(server):
   embed.set_thumbnail(url=str(server.icon_url))
   await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
 
-#Catches command errors. (check error)
+# #Catches command errors. (check error)
 @client.event
 async def on_command_error(error,context):#The check functions for command shutdown failed.
   if isinstance(error, commands.NoPrivateMessage):
@@ -278,11 +300,12 @@ async def watch(context,*args):
 
 #Gets watched list from database
 @client.command(description="Used to check what someone has watched. (?watched or ?watched mention)",brief="Used to check what someone has watched.",pass_context=True, aliases=["Watched"])
-async def watched(context, *arg):
+async def watched(context, *args):
   await client.delete_message(context.message)
+  search = settings(args)
   try:
-    movies = getWatchedID(getID(arg))
-    msg2 = await client.say(arg+" has watched:\n")
+    movies = getWatchedID(search.id)
+    msg2 = await client.say(search.mention+" has watched:\n")
   except:
     movies = getWatchedID(context.message.author.id)
     msg2 = await client.say("You have watched:\n")
@@ -290,7 +313,7 @@ async def watched(context, *arg):
 
 #Lists all movie entrys to database.
 @client.command(description="Lists all movies/tv in databse. (?list)",brief="Lists all movies/tv in databse.",pass_context=True, aliases=["List"])
-async def list(context):
+async def list(context, *args):
   await client.delete_message(context.message)
   movies = getMovies()
   await arrowPages(context,movies)
