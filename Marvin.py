@@ -75,7 +75,7 @@ def getLastFive():
 
 
 
-
+#checks to see if user is me
 def is_me(context):
   return context.message.author.id == "130470072190894082"
 
