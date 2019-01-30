@@ -68,6 +68,14 @@ def getMovies():
   conn.commit()
   return c.fetchall()
 
+def getMoviesLike(args):
+  where = []
+  for arg in args:
+    where.append('''(Movies.Genre) LIKE "%'''+arg+'''%"''')
+  c.execute('''SELECT Movies.Title, Movies.Season, Movies.Episodes FROM Movies WHERE ('''+" OR ".join(where)+''');''')
+  conn.commit()
+  return c.fetchall()
+
 def getLastFive():
   c.execute('''SELECT Title,Season FROM Movies ORDER BY MovieID DESC LIMIT 0,5''')
   conn.commit()
@@ -89,19 +97,12 @@ def didReact(users,author):
 #class for sorting out the user settings for watched and list.
 class settings():
   def __init__(self,args):
-    self.movie = False
-    self.tv = False
-    self.anime = False
     self.id = None
     self.mention = None
     self.genres = []
     for arg in args:
-      if arg == "movie" or arg == "Movie":
-        self.movie = True
-      elif arg == "tv" or arg == "TV":
-        self.tv = True
-      elif arg == "anime" or arg == "Anime":
-        self.anime = True
+      if arg == "tv" or arg == "TV":
+        self.genres.append("tv")
       elif re.match("(<@!?)[0-9]*(>)",arg):
         self.id = re.findall('\d+',arg)[0]
         self.mention = arg
@@ -202,7 +203,7 @@ async def on_server_remove(server):
   embed.set_thumbnail(url=str(server.icon_url))
   await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
 
-# #Catches command errors. (check error)
+#Catches command errors. (check error)
 @client.event
 async def on_command_error(error,context):#The check functions for command shutdown failed.
   if isinstance(error, commands.NoPrivateMessage):
@@ -315,7 +316,11 @@ async def watched(context, *args):
 @client.command(description="Lists all movies/tv in databse. (?list)",brief="Lists all movies/tv in databse.",pass_context=True, aliases=["List"])
 async def list(context, *args):
   await client.delete_message(context.message)
-  movies = getMovies()
+  if args == ():
+    movies = getMovies()
+  else:
+    search = settings(args)
+    movies = getMoviesLike(search.genres)
   await arrowPages(context,movies)
 
 #Changes the bot to the maintenance version.
