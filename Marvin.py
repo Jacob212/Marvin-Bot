@@ -38,8 +38,16 @@ def getIDS(discordID,title,season=None):
   movieID = b[0][1]
   return userID,movieID
 
-def getWatchedID(discordID):
-  c.execute('''SELECT Movies.Title, Movies.Season, Watched.Episode FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[UserID] = Watched.[UserID]) ON Movies.[MovieID] = Watched.[MovieID] WHERE (((Members.DiscordID)='''+discordID+''')) ORDER BY Movies.Title, Movies.Season;''')
+def getWatchedID(discordID,args):
+  where = []
+  if not args:
+    joined = ""
+  else:
+    for arg in args:
+      where.append('''(Movies.Genre) LIKE "%'''+arg+'''%"''')
+    joined = " AND ".join(where)
+    joined = '''AND ('''+joined+''') '''
+  c.execute('''SELECT Movies.Title, Movies.Season, Watched.Episode FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[UserID] = Watched.[UserID]) ON Movies.[MovieID] = Watched.[MovieID] WHERE (((Members.DiscordID)='''+discordID+''') '''+joined+''' ) ORDER BY Movies.Title, Movies.Season;''')
   conn.commit()
   return c.fetchall()
 
@@ -70,9 +78,14 @@ def getMovies():
 
 def getMoviesLike(args):
   where = []
-  for arg in args:
-    where.append('''(Movies.Genre) LIKE "%'''+arg+'''%"''')
-  c.execute('''SELECT Movies.Title, Movies.Season, Movies.Episodes FROM Movies WHERE ('''+" OR ".join(where)+''');''')
+  if not args:
+    joined = ""
+  else:
+    for arg in args:
+      where.append('''(Movies.Genre) LIKE "%'''+arg+'''%"''')
+    joined = " AND ".join(where)
+    joined = '''WHERE ('''+joined+''') '''
+  c.execute('''SELECT Movies.Title, Movies.Season, Movies.Episodes FROM Movies '''+joined+'''ORDER BY Movies.Title, Movies.Season;''')
   conn.commit()
   return c.fetchall()
 
@@ -84,9 +97,6 @@ def getLastFive():
 #checks to see if user is me
 def is_me(context):
   return context.message.author.id == "130470072190894082"
-
-def getID(discord):
-  return re.findall('\d+',discord)[0]
 
 def didReact(users,author):
   for i in range(len(users)):
@@ -304,23 +314,20 @@ async def watch(context,*args):
 async def watched(context, *args):
   await client.delete_message(context.message)
   search = settings(args)
-  try:
-    movies = getWatchedID(search.id)
-    msg2 = await client.say(search.mention+" has watched:\n")
-  except:
-    movies = getWatchedID(context.message.author.id)
+  if search.id == None:
+    movies = getWatchedID(context.message.author.id,search.genres)
     msg2 = await client.say("You have watched:\n")
+  else:
+    movies = getWatchedID(search.id,search.genres)
+    msg2 = await client.say(search.mention+" has watched:\n")
   await arrowPages(context,movies,msg2)
 
 #Lists all movie entrys to database.
 @client.command(description="Lists all movies/tv in databse. (?list)",brief="Lists all movies/tv in databse.",pass_context=True, aliases=["List"])
 async def list(context, *args):
   await client.delete_message(context.message)
-  if args == ():
-    movies = getMovies()
-  else:
-    search = settings(args)
-    movies = getMoviesLike(search.genres)
+  search = settings(args)
+  movies = getMoviesLike(search.genres)
   await arrowPages(context,movies)
 
 #Changes the bot to the maintenance version.
