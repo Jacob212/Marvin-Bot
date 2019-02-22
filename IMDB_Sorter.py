@@ -7,7 +7,7 @@ from operator import itemgetter
 
 conn = sqlite3.connect('Discord.db')
 c = conn.cursor()
-c.execute('''CREATE TABLE IF NOT EXISTS `Movies` (`movieID` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,`titleType` TEXT NOT NULL,`primaryTitle`  TEXT NOT NULL,`originalTitle` TEXT NOT NULL,`season`  INTEGER,`episodes`  INTEGER,`releaseYear` INTEGER NOT NULL,`runtimeMinutes`  INTEGER,`language`  TEXT,`genre` TEXT,`tconst`  TEXT NOT NULL);''')
+c.execute('''CREATE TABLE IF NOT EXISTS `Movies` (`movieID` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,`titleType` TEXT NOT NULL,`primaryTitle`  TEXT NOT NULL,`originalTitle` TEXT,`season`  INTEGER,`episodes`  INTEGER,`releaseYear` INTEGER,`runtimeMinutes`  INTEGER,`language`  TEXT,`genre` TEXT,`tconst`  TEXT NOT NULL);''')
 c.execute('''CREATE TABLE IF NOT EXISTS `Members` (`userID`  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,`discordID` INTEGER NOT NULL UNIQUE,`username`  TEXT NOT NULL);''')
 c.execute('''CREATE TABLE IF NOT EXISTS `Watched` (`ID`  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,`userID`  INTEGER,`movieID` INTEGER,`episode` INTEGER,FOREIGN KEY(`movieID`) REFERENCES `Movies`(`movieID`) ON DELETE SET NULL,FOREIGN KEY(`userID`) REFERENCES `Members`(`userID`) ON DELETE SET NULL);''')
 conn.commit()
@@ -19,7 +19,7 @@ def get_time(give_time):
   return str(int(hours))+":"+str(int(minutes))+":"+str(round(seconds,2)) 
 
 def setup():
-  if os.path.isfile('./allMovies.tsv') and os.path.isfile('./allTV.tsv'):
+  if os.path.isfile('./IMDBSorted/allMovies.tsv') and os.path.isfile('./IMDBSorted/allTV.tsv'):
     menu()
   else:
     print("Sorting movies and tv series")
@@ -67,7 +67,7 @@ def setup():
 
     print("adding languages to movies")
     start_time = time.time()
-    short = open("./allMovies.tsv", mode="w", encoding="utf-8")
+    short = open("./IMDBSorted/allMovies.tsv", mode="w", encoding="utf-8")
     index = 0
     for line in movie:
       line = line.rstrip("\n")
@@ -146,7 +146,7 @@ def setup():
 
     print("Adding season and episode numbers to all the other info.")
     start_time = time.time()
-    short = open("./allTV.tsv", mode="w", encoding="utf-8")
+    short = open("./IMDBSorted/allTV.tsv", mode="w", encoding="utf-8")
     index = 0
     for line in tvLanguages:
       line = line.rstrip("\n")
@@ -176,7 +176,8 @@ def menu():
     print("4: List all genres")
     print("5: List all languages")
     print("6: List all countries")
-    print("7: Exit")
+    print("7: Import menu")
+    print("8: Exit")
     option = input("Enter one of the options above: ")
     if option == "1" or option == "2":
       print("="*50)
@@ -197,15 +198,90 @@ def menu():
     elif option == "6":
       countries()
     elif option == "7":
+      importMenu()
+    elif option == "8":
       break
     else:
       print("Invalid option. please try again")
 
+def importMenu():
+  while True:
+    listOfFiles = os.listdir('./IMDBSorted/Sorted')
+    files = []
+    count = 0
+    print("="*50)
+    print("Enter the number for the file you want to select")
+    for file in listOfFiles:
+      if re.search(".tsv",file):
+        files.append(file)
+        print(str(count)+": "+file)
+        count += 1
+    print(str(count)+": Back")
+    option = input("Enter one of the options above: ")
+    if option == str(count):
+      break
+    else:
+      try:
+        importFile(listOfFiles[int(option)])
+      except Exception as e:
+        print(e)
+        print("Invalid option. please try again")
+
+def importFile(file):
+  print("Importing titles into database")
+  imported = 0
+  notImported = 0
+  start_time = time.time()
+  tenSeconds = time.time()
+  importFile = open("./IMDBSorted/Sorted/"+file, mode="r", encoding="utf-8")
+  for rownum, line in enumerate(importFile):
+    line = line.rstrip("\n")
+    words = line.split("\t")
+    tconst = words[0]
+    titleType = words[1]
+    primaryTitle = words[2]
+    originalTitle = words[3]
+    releaseYear = words[5]
+    if words[7] == "\\N":
+      runtimeMinutes = None
+    else:
+      runtimeMinutes = words[7]
+    if words[8] == "\\N":
+      genres = None
+    else:
+      genres = words[8]
+    countries = words[9]
+    languages = words[10]
+    if words[12] == "None":
+      episodes = None
+    else:
+      episodes = words[12]
+    if words[12] == "None":
+      season = None
+      c.execute('''SELECT Movies.primaryTitle FROM Movies WHERE primaryTitle = "'''+primaryTitle+'''" AND season is null ORDER BY Movies.primaryTitle, Movies.season;''')
+      conn.commit()
+    else:
+      season = words[11]
+      c.execute('''SELECT Movies.primaryTitle FROM Movies WHERE primaryTitle = "'''+primaryTitle+'''" AND season = "'''+str(season)+'''" ORDER BY Movies.primaryTitle, Movies.season;''')
+      conn.commit()
+    result = c.fetchall()
+    if result == []:
+      c.execute('''INSERT INTO Movies VALUES(?,?,?,?,?,?,?,?,?,?,?)''', (None,titleType,primaryTitle,originalTitle,season,episodes,releaseYear,runtimeMinutes,languages,genres,tconst))
+      conn.commit()
+      imported += 1
+    else:
+      notImported += 1
+    if (time.time()-tenSeconds) > 10:
+      print("Imported: "+str(imported)+"| Already in database: "+str(notImported)+"| Total time: "+get_time(start_time))
+      tenSeconds = time.time()
+  importFile.close()
+  print("Imported: "+str(imported)+"| Already in database: "+str(notImported)+"| Total time: "+get_time(start_time)+"\nFinshed")
+
 def searchFile(year,language,country,genre,file):
   print("Searching file for given options")
   start_time = time.time()
-  inFile = open("./"+file+".tsv", mode="r", encoding="utf-8")
-  outFile = open("./"+file+year+language+country+".tsv", mode="w", encoding="utf-8")
+  inFile = open("./IMDBSorted/"+file+".tsv", mode="r", encoding="utf-8")
+  outFile = open("./IMDBSorted/Sorted/"+file+year+language+country+genre+".tsv", mode="w", encoding="utf-8")
   for rownum, line in enumerate(inFile):
     words = line.split("\t")
     if re.search(year,words[5]) and re.search(country,words[9].lower()) and re.search(language,words[10]) and re.search(genre,words[8].lower()):
@@ -217,7 +293,7 @@ def searchFile(year,language,country,genre,file):
 def years():
   start_time = time.time()
   basics = open('./basics/data.tsv', mode='r', encoding='utf-8')
-  years = open('./YEARS.tsv', mode='w', encoding='utf-8')
+  years = open('./IMDBSorted/YEARS.tsv', mode='w', encoding='utf-8')
   totalYears = []
   yearsNone = None
   for rownum, line in enumerate(basics):
@@ -239,7 +315,7 @@ def years():
 def genres():
   start_time = time.time()
   basics = open('./basics/data.tsv', mode='r', encoding='utf-8')
-  genres = open('./GENRES.tsv', mode='w', encoding='utf-8')
+  genres = open('./IMDBSorted/GENRES.tsv', mode='w', encoding='utf-8')
   totalGenres = {}
   for rownum, line in enumerate(basics):
     line = line.rstrip("\n")
@@ -260,7 +336,7 @@ def genres():
 def languages():
   start_time = time.time()
   akas = open('./akas/data.tsv', mode='r', encoding='utf-8')
-  languages = open('./LANGUAGES.tsv', mode='w', encoding='utf-8')
+  languages = open('./IMDBSorted/LANGUAGES.tsv', mode='w', encoding='utf-8')
   totalLanguages = {}
   for rownum, line in enumerate(akas):
     line = line.rstrip("\n")
@@ -283,7 +359,7 @@ def languages():
 def countries():
   start_time = time.time()
   akas = open('./akas/data.tsv', mode='r', encoding='utf-8')
-  countries = open('./REGIONS.tsv', mode='w', encoding='utf-8')
+  countries = open('./IMDBSorted/REGIONS.tsv', mode='w', encoding='utf-8')
   totalCountries = {}
   for rownum, line in enumerate(akas):
     line = line.rstrip("\n")
