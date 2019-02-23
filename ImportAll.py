@@ -1,16 +1,13 @@
-import csv
-import os
 import time
 import sqlite3
 import re
 import gzip
-from operator import itemgetter
 
 conn = sqlite3.connect('Discord.db')
 c = conn.cursor()
-c.execute('''CREATE TABLE IF NOT EXISTS `Movies` (`movieID` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,`titleType` TEXT NOT NULL,`primaryTitle`  TEXT NOT NULL,`originalTitle` TEXT,`season`  INTEGER,`episodes`  INTEGER,`releaseYear` INTEGER,`runtimeMinutes`  INTEGER,`language`  TEXT,`genre` TEXT,`tconst`  TEXT NOT NULL);''')
-c.execute('''CREATE TABLE IF NOT EXISTS `Members` (`userID`  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,`discordID` INTEGER NOT NULL UNIQUE,`username`  TEXT NOT NULL);''')
-c.execute('''CREATE TABLE IF NOT EXISTS `Watched` (`ID`  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,`userID`  INTEGER,`movieID` INTEGER,`episode` INTEGER,FOREIGN KEY(`movieID`) REFERENCES `Movies`(`movieID`) ON DELETE SET NULL,FOREIGN KEY(`userID`) REFERENCES `Members`(`userID`) ON DELETE SET NULL);''')
+c.execute("CREATE TABLE IF NOT EXISTS Movies (movieID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,titleType TEXT NOT NULL,primaryTitle  TEXT NOT NULL,originalTitle TEXT,season  INTEGER,episodes  INTEGER,releaseYear INTEGER,runtimeMinutes  INTEGER,language  TEXT,genre TEXT,tconst  TEXT NOT NULL, UNIQUE(season,tconst));")
+c.execute("CREATE TABLE IF NOT EXISTS Members (userID  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,discordID INTEGER NOT NULL UNIQUE,username  TEXT NOT NULL);")
+c.execute("CREATE TABLE IF NOT EXISTS Watched (ID  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,userID  INTEGER,`movieID` INTEGER,episode INTEGER,FOREIGN KEY(movieID) REFERENCES Movies(movieID) ON DELETE SET NULL,FOREIGN KEY(userID) REFERENCES Members(userID) ON DELETE SET NULL);")
 conn.commit()
 
 def get_time(give_time):
@@ -189,5 +186,5 @@ def setup():
 setup()
 c.close()
 conn.close()
-
+input()
 #c.execute("SELECT Movies.primaryTitle FROM Movies WHERE primaryTitle = ? AND season = ? ORDER BY Movies.primaryTitle, Movies.season;",(primaryTitle,season))
