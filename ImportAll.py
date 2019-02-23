@@ -18,7 +18,7 @@ def get_time(give_time):
   return str(int(hours))+":"+str(int(minutes))+":"+str(round(seconds,2)) 
 
 def menu():
-  option = input("Enter either download or run setup: ")
+  option = input("Enter either download or setup: ")
   if option == "download":
     download()
     setup()
@@ -180,19 +180,8 @@ def setup():
   for line in allTitles:
     line = line.rstrip("\n")
     words = line.split("\t")
-    tconst = words[0]
-    titleType = words[1]
-    primaryTitle = words[2]
-    originalTitle = words[3]
-    releaseYear = words[5]
-    runtimeMinutes = words[7]
-    genres = words[8]
-    countries = words[9]
-    languages = words[10]
-    episodes = words[12]
-    season = words[11]
     try:
-      c.execute("INSERT INTO Movies VALUES(?,?,?,?,?,?,?,?,?,?,?)", (None,titleType,primaryTitle,originalTitle,season,episodes,releaseYear,runtimeMinutes,languages,genres,tconst))
+      c.execute("INSERT INTO Movies VALUES(?,?,?,?,?,?,?,?,?,?,?)", (None,words[1],words[2],words[3],words[11],words[12],words[5],words[7],words[10],words[8],words[0]))
       imported += 1
     except:
       notImported += 1
