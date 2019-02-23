@@ -2,6 +2,7 @@ import time
 import sqlite3
 import re
 import gzip
+import requests
 
 conn = sqlite3.connect('Discord.db')
 c = conn.cursor()
@@ -15,6 +16,37 @@ def get_time(give_time):
   minutes, seconds = divmod(elapsed_time,60)
   hours, minutes = divmod(minutes,60)
   return str(int(hours))+":"+str(int(minutes))+":"+str(round(seconds,2)) 
+
+def menu():
+  option = input("Enter either download or run setup: ")
+  if option == "download":
+    download()
+    setup()
+  elif option == "setup":
+    setup()
+
+def download():
+  url = "https://datasets.imdbws.com/title.basics.tsv.gz"
+  req = requests.get(url, stream=True)
+  total_size = int(req.headers.get('content-length', 0)); 
+  with open("./Datasets/title.basics.tsv.gz", "wb") as f:
+    for chunk in req.iter_content(1024): 
+      if chunk:
+        f.write(chunk)
+  url = "https://datasets.imdbws.com/title.akas.tsv.gz"
+  req = requests.get(url, stream=True)
+  total_size = int(req.headers.get('content-length', 0)); 
+  with open("./Datasets/title.akas.tsv.gz", "wb") as f:
+    for chunk in req.iter_content(1024): 
+      if chunk:
+        f.write(chunk)
+  url = "https://datasets.imdbws.com/title.episode.tsv.gz"
+  req = requests.get(url, stream=True)
+  total_size = int(req.headers.get('content-length', 0)); 
+  with open("./Datasets/title.episode.tsv.gz", "wb") as f:
+    for chunk in req.iter_content(1024): 
+      if chunk:
+        f.write(chunk)
 
 def setup():
   print("Running setup. This could take a minute.")
@@ -67,14 +99,14 @@ def setup():
       index += 1
       words2 = line2.split("\t")
       if words[0] == words2[0]:
-        allTitles.append(line+"\t"+words2[1]+"\t"+words2[2]+"\tNone\tNone\n")
+        allTitles.append(line+"\t"+words2[1]+"\t"+words2[2]+"\t\\N\t\\N\n")
         done = 1
         break
       if words2[0] > words[0]:
         index -= 1
         break
     if done == 0:
-      allTitles.append(line+"\tNone\tNone\tNone\tNone\n")
+      allTitles.append(line+"\t\\N\t\\N\t\\N\t\\N\n")
 
   tvLanguages = []
   index = 0
@@ -137,7 +169,7 @@ def setup():
         index -= 1
         break
     if done == 0:
-      allTitles.append(line+"\tNone\tNone\n")
+      allTitles.append(line+"\t\\N\t\\N\n")
   print("Finished in "+get_time(start_time))
 
   print("Importing titles into database")
@@ -153,24 +185,12 @@ def setup():
     primaryTitle = words[2]
     originalTitle = words[3]
     releaseYear = words[5]
-    if words[7] == "\\N":
-      runtimeMinutes = None
-    else:
-      runtimeMinutes = words[7]
-    if words[8] == "\\N":
-      genres = None
-    else:
-      genres = words[8]
+    runtimeMinutes = words[7]
+    genres = words[8]
     countries = words[9]
     languages = words[10]
-    if words[12] == "None":
-      episodes = None
-    else:
-      episodes = words[12]
-    if words[12] == "None":
-      season = None
-    else:
-      season = words[11]
+    episodes = words[12]
+    season = words[11]
     try:
       c.execute("INSERT INTO Movies VALUES(?,?,?,?,?,?,?,?,?,?,?)", (None,titleType,primaryTitle,originalTitle,season,episodes,releaseYear,runtimeMinutes,languages,genres,tconst))
       imported += 1
@@ -183,7 +203,7 @@ def setup():
   conn.commit()
   print("Imported: "+str(imported)+"| Already in database: "+str(notImported)+"| Total time: "+get_time(start_time)+"\nFinshed")
 
-setup()
+menu()
 c.close()
 conn.close()
 input()
