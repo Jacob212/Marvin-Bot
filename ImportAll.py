@@ -82,7 +82,7 @@ def setup():
           countries = [words[3]]
   sumLanguages.append([total,",".join(countries),",".join(languages)])
   akas.close()
-  
+
   allTitles = []
   index = 0
   for words in movie:
@@ -105,7 +105,7 @@ def setup():
   for words in tv:
     done = 0
     while index < len(sumLanguages):
-      words = sumLanguages[index]
+      words2 = sumLanguages[index]
       index += 1
       if words[0] == words2[0]:
         tvLanguages.append(words+[words2[1],words2[2]])
@@ -128,17 +128,20 @@ def setup():
   info = sorted(info,key=lambda x:(x[1],int(x[2]),int(x[3])))
 
   numbers = []
-  total = []
+  episodes = []
+  tconst = None
   for words in info:
-    if total == []:
-      total = [words[1]+"\t"+words[2]]
+    if tconst == None:
+      tconst = words[1]
+      episodes = [words[2]]
     else:
-      if words[1]+"\t"+words[2] in total:
-        total.append(words[1]+"\t"+words[2])
+      if words[1] == tconst and words[2] in episodes:
+        episodes.append(words[2])
       else:
-        numbers.append([total[0],len(total)])
-        total = [words[1]+"\t"+words[2]]
-  numbers.append([total[0],len(total)])
+        numbers.append([tconst,episodes[0],len(episodes)])
+        tconst = words[1]
+        episodes = [words[2]]
+  numbers.append([tconst,episodes[0],len(episodes)])
 
   index = 0
   for words in tvLanguages:
@@ -166,6 +169,7 @@ def setup():
       c.execute("INSERT INTO Movies VALUES(?,?,?,?,?,?,?,?,?,?,?)", (None,words[1],words[2],words[3],words[11],words[12],words[5],words[7],words[10],words[8],words[0]))
       imported += 1
     except:
+      c.execute("UPDATE Movies SET titleType=?,primaryTitle=?,originalTitle=?,season=?,episodes=?,releaseYear=?,runtimeMinutes=?,language=?,genre=? WHERE tconst = ? AND season = ?;",(words[1],words[2],words[3],words[11],words[12],words[5],words[7],words[10],words[8],words[0],words[11]))
       notImported += 1
     if (time.time()-tenSeconds) > 10:
       print("Imported: "+str(imported)+"| Already in database: "+str(notImported)+"| Total time: "+get_time(start_time))
