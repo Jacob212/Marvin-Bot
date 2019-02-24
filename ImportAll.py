@@ -161,7 +161,7 @@ def setup():
 
   print("Importing titles into database")
   imported = 0
-  notImported = 0
+  updated = 0
   start_time = time.time()
   tenSeconds = time.time()
   for words in allTitles:
@@ -170,13 +170,13 @@ def setup():
       imported += 1
     except:
       c.execute("UPDATE Movies SET titleType=?,primaryTitle=?,originalTitle=?,season=?,episodes=?,releaseYear=?,runtimeMinutes=?,language=?,genre=? WHERE tconst = ? AND season = ?;",(words[1],words[2],words[3],words[11],words[12],words[5],words[7],words[10],words[8],words[0],words[11]))
-      notImported += 1
+      updated += 1
     if (time.time()-tenSeconds) > 10:
-      print("Imported: "+str(imported)+"| Already in database: "+str(notImported)+"| Total time: "+get_time(start_time))
+      print(f'Imported: {imported} |Updated: {updated} |Total time: {get_time(start_time)}')
       tenSeconds = time.time()
       conn.commit()
   conn.commit()
-  print("Imported: "+str(imported)+"| Already in database: "+str(notImported)+"| Total time: "+get_time(start_time)+"\nFinshed")
+  print(f'Imported: {imported} |Updated: {updated} |Total time: {get_time(start_time)}')
 
 st=os.stat("./Datasets/title.basics.tsv.gz")
 Age=(time.time()-st.st_mtime)
@@ -185,4 +185,3 @@ if Age > 604800:#Will redownload only if the files are a week old.
 setup()
 c.close()
 conn.close()
-input()
