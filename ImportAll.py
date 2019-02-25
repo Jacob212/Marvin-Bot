@@ -193,6 +193,8 @@ def setup():
   conn.commit()
   print(f'Imported: {imported} |Updated: {updated} |Total time: {get_time(start_time)}')
 
+if not os.path.isdir("./Datasets"):
+  os.mkdir("./Datasets")
 if os.path.isfile("./Datasets/title.basics.tsv.gz"):
   st=os.stat("./Datasets/title.basics.tsv.gz")
   Age=(time.time()-st.st_mtime)
