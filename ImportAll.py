@@ -47,16 +47,31 @@ def setup():
   print("Running setup. This could take a minute.")
   start_time = time.time()
   basics = gzip.open("./Datasets/title.basics.tsv.gz", mode="rt", encoding="utf-8")
+  basic = basics.readlines()
+  basics.close()
   movie = []
   tv = []
-  for rownum, line in enumerate(basics):
+  for line in basic:
     line = line.rstrip("\n")
     words = line.split("\t")
     if words[1] == "movie":
       movie.append(words)
     elif words[1] == "tvSeries":
       tv.append(words)
-  basics.close()
+
+  genres = open("./GENRES.txt", mode="w")
+  totalGenres = []
+  for line in basic:
+    line = line.rstrip("\n")
+    words = line.split("\t")
+    genresList = words[8].split(",")
+    for genre in genresList:
+      if genre not in totalGenres and genre != "genres":
+        totalGenres.append(genre)
+  totalGenres.sort()
+  for genre in totalGenres:
+    genres.write(genre+"\n")
+  genres.close()
 
   akas = gzip.open("./Datasets/title.akas.tsv.gz", mode="rt", encoding="utf-8")
   sumLanguages = []
