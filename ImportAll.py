@@ -178,9 +178,12 @@ def setup():
   conn.commit()
   print(f'Imported: {imported} |Updated: {updated} |Total time: {get_time(start_time)}')
 
-st=os.stat("./Datasets/title.basics.tsv.gz")
-Age=(time.time()-st.st_mtime)
-if Age > 604800:#Will redownload only if the files are a week old.
+if os.path.isfile("./Datasets/title.basics.tsv.gz"):
+  st=os.stat("./Datasets/title.basics.tsv.gz")
+  Age=(time.time()-st.st_mtime)
+  if Age > 604800:#Will redownload only if the files are a week old.
+    download()
+else:
   download()
 setup()
 c.close()
