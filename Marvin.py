@@ -20,6 +20,14 @@ f = open("Token.txt","r")#Reads bot taken from text file.
 TOKEN = f.read()
 f.close()
 
+f = open("GENRES.txt","r")
+genres = f.readlines()
+f.close()
+allGenres = []
+for genre in genres:
+  genre = genre.rstrip("\n")
+  allGenres.append(genre.lower())
+
 def new_member(discordID,name):
   c.execute("INSERT INTO members VALUES(?,?,?)", (None,discordID,name))
   conn.commit()
@@ -99,6 +107,7 @@ class Settings():
     self.mention = None
     self.titleType = "%"
     self.genre = "%"
+    genres = []
     for arg in args:
       if arg.lower() == "tv":
         self.titleType = "tvSeries"
@@ -107,8 +116,9 @@ class Settings():
       elif re.match("(<@!?)[0-9]*(>)",arg):
         self.id = re.findall("\d+",arg)[0]
         self.mention = arg
-      else:
-        self.genre = f'%{arg.lower()}%'
+      elif arg in allGenres:
+        genres.append(arg)
+    self.genre = f'%{"%".join(genres)}%'
 
 async def arrowPages2(context,search,header=None):
   page = 1
@@ -131,7 +141,7 @@ async def arrowPages2(context,search,header=None):
       await client.add_reaction(msg, "▶")
       client.loop.create_task(delete(context,msg,header))
     res = await client.wait_for_reaction(["▶", "◀"], message=msg,user=context.message.author)
-    if res.reaction.emoji == "▶" and page <= math.ceil(total/10):
+    if res.reaction.emoji == "▶" and len(movies) == 10:
       page += 1
     elif res.reaction.emoji == "◀" and page != 1:
       page -= 1
