@@ -8,7 +8,7 @@ import re
 import discord
 import os
 import math
-#https://www.imdb.com/title/tt0000001/?ref_=fn_al_tt_1
+
 conn = sqlite3.connect("Discord.db")
 c = conn.cursor()
 c.execute("CREATE TABLE IF NOT EXISTS Movies (movieID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,titleType TEXT NOT NULL,primaryTitle  TEXT NOT NULL,originalTitle TEXT,season  INTEGER,episodes  INTEGER,releaseYear INTEGER,runtimeMinutes  INTEGER,language  TEXT,genre TEXT,tconst  TEXT NOT NULL, UNIQUE(season,tconst));")
@@ -16,7 +16,7 @@ c.execute("CREATE TABLE IF NOT EXISTS Members (userID  INTEGER NOT NULL PRIMARY 
 c.execute("CREATE TABLE IF NOT EXISTS Watched (ID  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,userID  INTEGER,`movieID` INTEGER,episode INTEGER,FOREIGN KEY(movieID) REFERENCES Movies(movieID) ON DELETE SET NULL,FOREIGN KEY(userID) REFERENCES Members(userID) ON DELETE SET NULL);")
 conn.commit()
 
-f = open("Token.txt","r")#Reads bot taken from text file.
+f = open("Token.txt","r")#Reads bot token from text file.
 TOKEN = f.read()
 f.close()
 
@@ -77,7 +77,7 @@ def getMoviesLike(genre,titleType):
   return c.fetchall()
 
 def getMoviesLikeLimit(genre,titleType,offSet):
-  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes FROM Movies WHERE (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(titleType,genre,offSet))
+  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes, Movies.tconst FROM Movies WHERE (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(titleType,genre,offSet))
   return c.fetchall()
 
 def getLastFive():
@@ -118,14 +118,15 @@ class Settings():
         self.mention = arg
       elif arg in allGenres:
         genres.append(arg)
+    genres.sort()
     self.genre = f'%{"%".join(genres)}%'
 
 async def arrowPages2(context,search,header=None):
+  emojiList = ["◀","▶","0⃣","1⃣","2⃣","3⃣","4⃣","5⃣","6⃣","7⃣","8⃣","9⃣"]
   page = 1
-  total = getLength()
   while True:
-    movies = getMoviesLikeLimit(search.genre,search.titleType,page*10)
-    message = "Page: "+str(page)+"\n"
+    movies = getMoviesLikeLimit(search.genre,search.titleType,(page-1)*10)
+    message = "Page: "+str(page)+"🔟\n"
     count = 0
     for movie in movies:
       if movie[0] == "movie":
@@ -137,17 +138,19 @@ async def arrowPages2(context,search,header=None):
       await client.edit_message(msg,message)
     except:
       msg = await client.say(message)
-      await client.add_reaction(msg, "◀")
-      await client.add_reaction(msg, "▶")
-      client.loop.create_task(delete(context,msg,header))
-    res = await client.wait_for_reaction(["▶", "◀"], message=msg,user=context.message.author)
+    for emoji in emojiList:
+      await client.add_reaction(msg, emoji)
+      #client.loop.create_task(delete(context,msg,header))
+    res = await client.wait_for_reaction(["▶", "◀"]+emojiList, message=msg,user=context.message.author)
     if res.reaction.emoji == "▶" and len(movies) == 10:
       page += 1
     elif res.reaction.emoji == "◀" and page != 1:
       page -= 1
+    elif res.reaction.emoji in emojiList:
+      await client.remove_reaction(msg, res.reaction.emoji, context.message.author)
+      await expand(movies,emojiList.index(res.reaction.emoji),msg,context)
     await client.remove_reaction(msg, "▶", context.message.author)
     await client.remove_reaction(msg, "◀", context.message.author)
-
 
 async def arrowPages(context,movies,header=None):
   pages = []
@@ -190,8 +193,21 @@ async def arrowPages(context,movies,header=None):
       await client.remove_reaction(msg, "▶", context.message.author)
       await client.remove_reaction(msg, "◀", context.message.author)
 
-async def expand():
-  pass
+async def expand(movies,index,msg,context):
+  emojiList = ["◀","▶","0⃣","1⃣","2⃣","3⃣","4⃣","5⃣","6⃣","7⃣","8⃣","9⃣"]
+  await client.edit_message(msg,f'{movies[index]}https://www.imdb.com/title/{movies[4]}/?ref_=fn_al_tt_1')
+  for emoji in emojiList:
+    await client.remove_reaction(msg, emoji, client.user)
+  await client.add_reaction(msg, '✅')
+  await client.add_reaction(msg, '❎')
+  while True:
+      res = await client.wait_for_reaction(["✅", "❎"], message=msg,user=context.message.author)
+      if res.reaction.emoji == "✅":
+        await client.edit_message(msg,"Fart")
+      elif res.reaction.emoji == "❎":
+        break
+      await client.remove_reaction(msg, "✅", context.message.author)
+      await client.remove_reaction(msg, "❎", context.message.author)
 
 #Updates the bots playing status with the last 5 titles that were added to the database
 async def change_status():
@@ -208,7 +224,7 @@ async def change_status():
     await client.change_presence(game=discord.Game(name=next(msgs)))
     await asyncio.sleep(10)
 
-#Sames as delete_after attribute but works for varying times. e.g. timer resets after someone reacts
+#Same as delete_after attribute but works for varying times. e.g. timer resets after someone reacts
 async def delete(context,msg,header=None):
   count = 0
   while count != 60:
