@@ -45,7 +45,7 @@ def getIDS(discordID,primaryTitle,season="\\N"):
   return userID,movieID
 
 def getWatchedID(discordID,genre,titleType):
-  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Watched.episode FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[userID] = Watched.[userID]) ON Movies.[movieID] = Watched.[movieID] WHERE (Members.discordID) = ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? ORDER BY Movies.primaryTitle, Movies.season;",(discordID,titleType,genre))
+  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Watched.episode, Movies.tconst FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[userID] = Watched.[userID]) ON Movies.[movieID] = Watched.[movieID] WHERE (Members.discordID) = ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? ORDER BY Movies.primaryTitle, Movies.season;",(discordID,titleType,genre))
   conn.commit()
   return c.fetchall()
 
@@ -121,93 +121,78 @@ class Settings():
     genres.sort()
     self.genre = f'%{"%".join(genres)}%'
 
-async def arrowPages2(context,search,header=None):
-  emojiList = ["◀","▶","0⃣","1⃣","2⃣","3⃣","4⃣","5⃣","6⃣","7⃣","8⃣","9⃣"]
-  page = 1
-  while True:
-    movies = getMoviesLikeLimit(search.genre,search.titleType,(page-1)*10)
-    message = "Page: "+str(page)+"🔟\n"
-    count = 0
-    for movie in movies:
-      if movie[0] == "movie":
-        message = message+str(count)+": "+movie[1]+"\n"
-      elif movie[0] == "tvSeries":
-        message = message+str(count)+": "+movie[1]+ " Season: " +str(movie[2])+ " Episode: " +str(movie[3])+"\n"
-      count += 1
-    try:
-      await client.edit_message(msg,message)
-    except:
-      msg = await client.say(message)
-    for emoji in emojiList:
-      await client.add_reaction(msg, emoji)
-      #client.loop.create_task(delete(context,msg,header))
-    res = await client.wait_for_reaction(["▶", "◀"]+emojiList, message=msg,user=context.message.author)
-    if res.reaction.emoji == "▶" and len(movies) == 10:
-      page += 1
-    elif res.reaction.emoji == "◀" and page != 1:
-      page -= 1
-    elif res.reaction.emoji in emojiList:
-      await client.remove_reaction(msg, res.reaction.emoji, context.message.author)
-      await expand(movies,emojiList.index(res.reaction.emoji),msg,context)
-    await client.remove_reaction(msg, "▶", context.message.author)
-    await client.remove_reaction(msg, "◀", context.message.author)
+class arrowPages():
+  def __init__(self,context,args):
+    self.context = context
+    self.id = None
+    self.mention = None
+    self.titleType = "%"
+    self.genre = "%"
+    genres = []
+    for arg in args:
+      if arg.lower() == "tv":
+        self.titleType = "tvSeries"
+      elif arg.lower() == "movie":
+        self.titleType = "movie"
+      elif re.match("(<@!?)[0-9]*(>)",arg):
+        self.id = re.findall("\d+",arg)[0]
+        self.mention = arg
+      elif arg in allGenres:
+        genres.append(arg)
+    genres.sort()
+    self.genre = f'%{"%".join(genres)}%'
 
-async def arrowPages(context,movies,header=None):
-  pages = []
-  count = 0
-  page = 0
-  while count != len(movies):
-      page += 1
-      message = "Page: "+str(page)+"\n"
-      for x in range(1,11):
-        episode = movies[count][3]
-        season = movies[count][2]
-        title = movies[count][1]
-        titleType = movies[count][0]
-        count += 1
-        if titleType == "movie":
-          message = message+str(x)+": "+title+"\n"
-        elif titleType == "tvSeries":
-          message = message+str(x)+": "+title+ " Season: " +str(season)+ " Episode: " +str(episode)+"\n"
-        if count == len(movies):
-          break
-      pages.append(message)
-  if not pages:
-    if header != None:
-      await client.delete_message(header)
-    await client.say("You have not added anything you have watched to the system yet",delete_after=10)
-  else:
-    page = 0
-    msg = await client.say(pages[page])
-    await client.add_reaction(msg, "◀")
-    await client.add_reaction(msg, "▶")
-    client.loop.create_task(delete(context,msg,header))
+  async def display(self,header=None):
+    page = 1
     while True:
-      res = await client.wait_for_reaction(["▶", "◀"], message=msg,user=context.message.author)
-      if res.reaction.emoji == "▶" and page <= (len(pages)-2):
+      if str(self.context.command) == "list":
+        self.movies = getMoviesLikeLimit(self.genre,self.titleType,(page-1)*10)
+        embed = discord.Embed(title="Listing titles in database",color=16727013)
+      elif str(self.context.command) == "watched":
+        if self.id is None:
+          self.movies = getWatchedID(self.context.message.author.id,self.genre,self.titleType)
+          embed = discord.Embed(title="Listing titles watched by "+self.context.message.author.name,color=16727013)
+          #msg2 = await client.say("You have watched:\n")
+        else:
+          self.movies = getWatchedID(self.id,self.genre,self.titleType)
+          embed = discord.Embed(title="Listing titles watched by "+self.mention,color=16727013)
+          #msg2 = await client.say(self.mention+" has watched:\n")
+      #message = "Page: "+str(page)+"\n"
+      message = ""
+      count = 0
+      for movie in self.movies:
+        if movie[0] == "movie":
+          message += str(count)+": "+movie[1]+"\n"
+        elif movie[0] == "tvSeries":
+          message += str(count)+": "+movie[1]+" Season: "+str(movie[2])+" Episode: "+str(movie[3])+"\n"
+        count += 1
+      embed.add_field(name="Page: "+str(page),value=message)
+      try:
+        #await client.edit_message(self.msg,message)
+        await client.edit_message(self.msg,embed=embed)
+      except:
+        #self.msg = await client.say(message)
+        self.msg = await client.say(embed=embed) 
+      await client.add_reaction(self.msg, "◀")
+      await client.add_reaction(self.msg, "▶")
+      res = await client.wait_for_reaction(["▶", "◀"], message=self.msg,user=self.context.message.author)
+      if res.reaction.emoji == "▶" and len(self.movies) == 10:
         page += 1
-        await client.edit_message(msg,pages[page])
-      elif res.reaction.emoji == "◀" and page != 0:
+      elif res.reaction.emoji == "◀" and page != 1:
         page -= 1
-        await client.edit_message(msg,pages[page])
-      await client.remove_reaction(msg, "▶", context.message.author)
-      await client.remove_reaction(msg, "◀", context.message.author)
+      await client.remove_reaction(self.msg, "▶", self.context.message.author)
+      await client.remove_reaction(self.msg, "◀", self.context.message.author)
 
-async def expand(movies,index,msg,context):
-  emojiList = ["◀","▶","0⃣","1⃣","2⃣","3⃣","4⃣","5⃣","6⃣","7⃣","8⃣","9⃣"]
-  await client.edit_message(msg,f'{movies[index]}https://www.imdb.com/title/{movies[4]}/?ref_=fn_al_tt_1')
-  for emoji in emojiList:
-    await client.remove_reaction(msg, emoji, client.user)
-  await client.add_reaction(msg, '✅')
-  await client.add_reaction(msg, '❎')
-  while True:
-      res = await client.wait_for_reaction(["✅", "❎"], message=msg,user=context.message.author)
-      if res.reaction.emoji == "✅":
-        await client.edit_message(msg,"Fart")
-      elif res.reaction.emoji == "❎":
+  async def expand(self,index):
+    embed = discord.Embed(title=self.movies[index][1],description=self.movies[index][2]+self.movies[index][3],color=16727013)
+    embed.add_field(name="IMDB link",value=f'https://www.imdb.com/title/{self.movies[index][4]}/?ref_=fn_al_tt_1')
+    await client.edit_message(self.msg,embed=embed)
+    await client.remove_reaction(self.msg, "▶", client.user)
+    while True:
+      res = await client.wait_for_reaction("◀", message=self.msg,user=self.context.message.author)
+      if res.reaction.emoji == "◀":
         break
-      await client.remove_reaction(msg, "✅", context.message.author)
-      await client.remove_reaction(msg, "❎", context.message.author)
+      await client.remove_reaction(self.msg, "◀", self.context.message.author)
 
 #Updates the bots playing status with the last 5 titles that were added to the database
 async def change_status():
@@ -223,20 +208,6 @@ async def change_status():
   while not client.is_closed:
     await client.change_presence(game=discord.Game(name=next(msgs)))
     await asyncio.sleep(10)
-
-#Same as delete_after attribute but works for varying times. e.g. timer resets after someone reacts
-async def delete(context,msg,header=None):
-  count = 0
-  while count != 60:
-    count += 1
-    leftUsers = await client.get_reaction_users(discord.utils.get(client.messages, id=msg.id).reactions[0])
-    rightUsers = await client.get_reaction_users(discord.utils.get(client.messages, id=msg.id).reactions[1])
-    await asyncio.sleep(1)
-    if didReact(leftUsers,context.message.author) == True or didReact(rightUsers,context.message.author) == True:
-      count = 0
-  await client.delete_message(msg)
-  if header != None:
-    await client.delete_message(header)
 
 client = commands.Bot(command_prefix="?")
 
@@ -294,16 +265,17 @@ async def info(context):
 #Adds user to database
 @client.command(description="Adds you to bot database. (?add)",brief="Adds you to bot database.",pass_context=True, aliases=["Add"])
 async def add(context):
+  await client.delete_message(context.message)
   try:
     new_member(str(context.message.author.id),str(context.message.author))
     await client.say("Added to system, " + context.message.author.mention,delete_after=10)
   except:
-    await client.say("You are already added to the system, " + context.message.author.mention,delete_after=10)
-  await client.delete_message(context.message)
+    await client.say("You are already in the system, " + context.message.author.mention,delete_after=10)
 
 #User can request for new titles to be added
 @client.command(description="Request for a movie/tv to be added. (?request MESSAGE)",brief="Request for a movie/tv to be added.",pass_context=True, aliases=["Request"])
 async def request(context, *args):
+  await client.delete_message(context.message)
   message = " ".join(args)
   await client.send_message(discord.Object(id='538720732499410968'),context.message.author.mention+" "+message)
   await client.say("Your request has been logged",delete_after=10)
@@ -333,21 +305,26 @@ async def watch(context,*args):
 @client.command(description="Used to check what someone has watched. (?watched or ?watched mention)",brief="Used to check what someone has watched.",pass_context=True, aliases=["Watched"])
 async def watched(context, *args):
   await client.delete_message(context.message)
-  search = Settings(args)
-  if search.id == None:
-    movies = getWatchedID(context.message.author.id,search.genre,search.titleType)
-    msg2 = await client.say("You have watched:\n")
-  else:
-    movies = getWatchedID(search.id,search.genre,search.titleType)
-    msg2 = await client.say(search.mention+" has watched:\n")
-  await arrowPages(context,movies,msg2)
+  globals()[context.message.author] = arrowPages(context,args)
+  await globals()[context.message.author].display()
 
 #Lists all movie entrys to database.
 @client.command(description="Lists all movies/tv in databse. (?list)",brief="Lists all movies/tv in databse.",pass_context=True, aliases=["List"])
 async def list(context, *args):
   await client.delete_message(context.message)
-  search = Settings(args)
-  await arrowPages2(context,search)
+  globals()[context.message.author] = arrowPages(context,args)
+  await globals()[context.message.author].display()
+
+#Used with list command to get more info on a given movie or tv show.
+@client.command(description="",brief="",pass_context=True,aliases=["Select"])
+async def select(context, arg=None):
+  await client.delete_message(context.message)
+  if arg is None:
+    await client.say("You have to enter an option to use this command")
+  elif arg.isdigit() and context.message.author in globals():
+    await globals()[context.message.author].expand(int(arg))
+  else:
+    await client.say("That is not a valid option")
 
 #Changes the bot to the maintenance version.
 @commands.check(is_me)
