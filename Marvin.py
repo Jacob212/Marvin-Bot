@@ -215,25 +215,25 @@ async def on_server_remove(server):
   await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
 
 #Catches command errors. (check error)
-# @client.event
-# async def on_command_error(error,context):#The check functions for command shutdown failed.
-#   print(error)
-#   if isinstance(error, commands.NoPrivateMessage):
-#     await bot.send_message(context.message.channel, "**private messages.** " + context.message.author.mention)
-#   if isinstance(error, commands.MissingRequiredArgument):
-#     await bot.send_message(context.message.channel, "**Missing an argument.** " + context.message.author.mention)
-#   elif isinstance(error, commands.DisabledCommand):
-#     await bot.send_message(context.message.channel, "** Command is disabled.** " + context.message.author.mention)
-#   elif isinstance(error, commands.CheckFailure):
-#     await bot.send_message(context.message.channel, "**no permission.** " + context.message.author.mention)
-#   elif isinstance(error, commands.CommandNotFound):
-#     await bot.send_message(context.message.channel, "**wrong command.** " + context.message.author.mention)
-#   else:
-#     embed = discord.Embed(title=str(context.message.author)+"     "+str(context.message.content),description=str(error))
-#     await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
-#     msg = await client.send_message(context.message.channel,"You either dont have access to the command or you have entered something wrong."+context.message.author.mention)
-#     await asyncio.sleep(10)
-#     await client.delete_message(msg)
+@client.event
+async def on_command_error(error,context):#The check functions for command shutdown failed.
+  print(error)
+  if isinstance(error, commands.NoPrivateMessage):
+    await bot.send_message(context.message.channel, "**private messages.** " + context.message.author.mention)
+  if isinstance(error, commands.MissingRequiredArgument):
+    await bot.send_message(context.message.channel, "**Missing an argument.** " + context.message.author.mention)
+  elif isinstance(error, commands.DisabledCommand):
+    await bot.send_message(context.message.channel, "** Command is disabled.** " + context.message.author.mention)
+  elif isinstance(error, commands.CheckFailure):
+    await bot.send_message(context.message.channel, "**no permission.** " + context.message.author.mention)
+  elif isinstance(error, commands.CommandNotFound):
+    await bot.send_message(context.message.channel, "**wrong command.** " + context.message.author.mention)
+  else:
+    embed = discord.Embed(title=str(context.message.author)+"     "+str(context.message.content),description=str(error))
+    await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
+    msg = await client.send_message(context.message.channel,"You either dont have access to the command or you have entered something wrong."+context.message.author.mention)
+    await asyncio.sleep(10)
+    await client.delete_message(msg)
 
 #Tells the user where the info about the movies and tv shows are from.
 @client.command(description="Infomation for where the data is from.",brief="Infomation for where the data is from.",pass_context=True,aliases=["Info"])
