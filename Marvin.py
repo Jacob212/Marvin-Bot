@@ -32,12 +32,12 @@ def new_member(discordID,name):
   c.execute("INSERT INTO members VALUES(?,?,?)", (None,discordID,name))
   conn.commit()
 
-def new_watched(userID,movieID,episode="\\N"):
+def new_watched(userID,movieID,episode):
   c.execute("INSERT INTO watched VALUES(?,?,?,?)", (None,userID,movieID,episode))
   conn.commit()
 
-def getIDS(discordID,primaryTitle,season="\\N"):
-  c.execute("SELECT Members.userID, Movies.movieID FROM Movies,Members WHERE (((Members.[discordID])=?) AND ((Movies.[primaryTitle])=?) AND ((Movies.[season])=?));",(int(discordID),primaryTitle,int(season)))
+def getIDS(discordID,primaryTitle,season):
+  c.execute("SELECT Members.userID, Movies.movieID FROM Movies,Members WHERE (((Members.[discordID])=?) AND ((Movies.[primaryTitle])=?) AND ((Movies.[season])=?));",(int(discordID),primaryTitle,season))
   conn.commit()
   b = c.fetchall()
   userID = b[0][0]
@@ -54,11 +54,11 @@ def getWatchedMovie(title,season="\\N"):
   conn.commit()
   return c.fetchall()
 
-def updateWatched(discordID,title,episode="\\N"):
-  c.execute("UPDATE Watched SET Episode = ? WHERE (UserID = (SELECT UserID FROM Members WHERE DiscordID = ?)) AND (MovieID = (SELECT MovieID FROM Movies WHERE Title = ?));",(episode,discordID,title))
+def updateWatched(discordID,primaryTitle,episode):
+  c.execute("UPDATE Watched SET episode = ? WHERE (UserID = (SELECT UserID FROM Members WHERE DiscordID = ?)) AND (MovieID = (SELECT MovieID FROM Movies WHERE primaryTitle = ?));",(episode,discordID,primaryTitle))
   conn.commit()
 
-def checkWatched(discordID,primaryTitle,season="\\N"):#Checks to see if someone has already watched an episode already(False if the have not and True if they have)
+def checkWatched(discordID,primaryTitle,season):#Checks to see if someone has already watched an episode already(False if the have not and True if they have)
   c.execute("SELECT Members.discordID, Movies.primaryTitle, Movies.season FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[UserID] = Watched.[UserID]) ON Movies.[MovieID] = Watched.[MovieID] WHERE (((Members.discordID) = ?) AND ((Movies.primaryTitle)=?) AND ((Movies.season)=?));",(discordID,primaryTitle,season))
   conn.commit()
   if c.fetchall() == []:
@@ -77,7 +77,7 @@ def getMoviesLike(genre,titleType):
   return c.fetchall()
 
 def getMoviesLikeLimit(genre,titleType,offSet):
-  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes, Movies.tconst FROM Movies WHERE (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(titleType,genre,offSet))
+  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes, Movies.tconst, Movies.releaseYear, Movies.runtimeMinutes, Movies.genre, Movies.originalTitle FROM Movies WHERE (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(titleType,genre,offSet))
   return c.fetchall()
 
 def getLastFive():
@@ -99,27 +99,6 @@ def didReact(users,author):
     if users[i] == author:
       return True
   return False
-
-#class for sorting out the user settings for watched and list.
-class Settings():
-  def __init__(self,args):
-    self.id = None
-    self.mention = None
-    self.titleType = "%"
-    self.genre = "%"
-    genres = []
-    for arg in args:
-      if arg.lower() == "tv":
-        self.titleType = "tvSeries"
-      elif arg.lower() == "movie":
-        self.titleType = "movie"
-      elif re.match("(<@!?)[0-9]*(>)",arg):
-        self.id = re.findall("\d+",arg)[0]
-        self.mention = arg
-      elif arg in allGenres:
-        genres.append(arg)
-    genres.sort()
-    self.genre = f'%{"%".join(genres)}%'
 
 class arrowPages():
   def __init__(self,context,args):
@@ -147,17 +126,14 @@ class arrowPages():
     while True:
       if str(self.context.command) == "list":
         self.movies = getMoviesLikeLimit(self.genre,self.titleType,(page-1)*10)
-        embed = discord.Embed(title="Listing titles in database",color=16727013)
+        embed = discord.Embed(title="Listing titles in database",color=self.context.message.author.color.value)
       elif str(self.context.command) == "watched":
         if self.id is None:
           self.movies = getWatchedID(self.context.message.author.id,self.genre,self.titleType)
-          embed = discord.Embed(title="Listing titles watched by "+self.context.message.author.name,color=16727013)
-          #msg2 = await client.say("You have watched:\n")
+          embed = discord.Embed(title="Listing titles watched by "+self.context.message.author.name,color=self.context.message.author.color.value)
         else:
           self.movies = getWatchedID(self.id,self.genre,self.titleType)
-          embed = discord.Embed(title="Listing titles watched by "+self.mention,color=16727013)
-          #msg2 = await client.say(self.mention+" has watched:\n")
-      #message = "Page: "+str(page)+"\n"
+          embed = discord.Embed(title="Listing titles watched by "+self.mention,color=self.context.message.author.color.value)
       message = ""
       count = 0
       for movie in self.movies:
@@ -166,12 +142,10 @@ class arrowPages():
         elif movie[0] == "tvSeries":
           message += str(count)+": "+movie[1]+" Season: "+str(movie[2])+" Episode: "+str(movie[3])+"\n"
         count += 1
-      embed.add_field(name="Page: "+str(page),value=message)
+      embed.add_field(name="Page: "+str(page),value=message,inline=False)
       try:
-        #await client.edit_message(self.msg,message)
         await client.edit_message(self.msg,embed=embed)
       except:
-        #self.msg = await client.say(message)
         self.msg = await client.say(embed=embed) 
       await client.add_reaction(self.msg, "◀")
       await client.add_reaction(self.msg, "▶")
@@ -183,9 +157,14 @@ class arrowPages():
       await client.remove_reaction(self.msg, "▶", self.context.message.author)
       await client.remove_reaction(self.msg, "◀", self.context.message.author)
 
-  async def expand(self,index):
-    embed = discord.Embed(title=self.movies[index][1],description=self.movies[index][2]+self.movies[index][3],color=16727013)
-    embed.add_field(name="IMDB link",value=f'https://www.imdb.com/title/{self.movies[index][4]}/?ref_=fn_al_tt_1')
+  async def expand(self,index):#Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes, Movies.tconst, Movies.releaseYear, Movies.runtimeMinutes, Movies.genre, Movies.originalTitle
+    embed = discord.Embed(title=self.movies[index][1],description=self.movies[index][2]+self.movies[index][3],url=f'https://www.imdb.com/title/{self.movies[index][4]}/?ref_=fn_al_tt_1',color=16727013)
+    embed.add_field(name="Original Title",value=self.movies[index][8])
+    embed.add_field(name="Release Year",value=self.movies[index][5])
+    embed.add_field(name="Run Time",value=self.movies[index][6])
+    embed.add_field(name="Season",value=self.movies[index][2])
+    embed.add_field(name="Episodes",value=self.movies[index][3])
+    embed.add_field(name="Genres",value=self.movies[index][7])
     await client.edit_message(self.msg,embed=embed)
     await client.remove_reaction(self.msg, "▶", client.user)
     while True:
@@ -260,7 +239,8 @@ async def on_server_remove(server):
 @client.command(description="Infomation for where the data is from.",brief="Infomation for where the data is from.",pass_context=True,aliases=["Info"])
 async def info(context):
   await client.delete_message(context.message)
-  await client.say("Information courtesy of\nIMDb\n(http://www.imdb.com)\nUsed with permission.",delete_after=10)   
+  embed = discord.Embed(title="Information courtesy of",description="IMDB\nhttp://www.imdb.com\nUsed with permission",color=context.message.author.color.value)
+  await client.say(embed=embed,delete_after=10)   
 
 #Adds user to database
 @client.command(description="Adds you to bot database. (?add)",brief="Adds you to bot database.",pass_context=True, aliases=["Add"])
@@ -273,11 +253,11 @@ async def add(context):
     await client.say("You are already in the system, " + context.message.author.mention,delete_after=10)
 
 #User can request for new titles to be added
-@client.command(description="Request for a movie/tv to be added. (?request MESSAGE)",brief="Request for a movie/tv to be added.",pass_context=True, aliases=["Request"])
+@client.command(description="Request for a movie/tv to be added. If the message is more than 256 characters long it will not be logged. (?request MESSAGE)",brief="Request for a movie/tv to be added.",pass_context=True, aliases=["Request"])
 async def request(context, *args):
   await client.delete_message(context.message)
-  message = " ".join(args)
-  await client.send_message(discord.Object(id='538720732499410968'),context.message.author.mention+" "+message)
+  embed = discord.Embed(title=" ".join(args),description=f'Request logged by {context.message.author.mention}',color=context.message.author.color.value)
+  await client.send_message(discord.Object(id='538720732499410968'),embed=embed)
   await client.say("Your request has been logged",delete_after=10)
 
 #Adds or updates the users watch list in database.
@@ -292,8 +272,8 @@ async def watch(context,*args):
     title = " ".join(args[0:-2])
   except:
     title = " ".join(args)
-    episode = None
-    season = None
+    episode = "\\N"
+    season = "\\N"
   userID,movieID = getIDS(str(context.message.author.id),title,season)
   if checkWatched(str(context.message.author.id),title,season) == True:
     updateWatched(str(context.message.author.id),title,episode)
