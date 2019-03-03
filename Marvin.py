@@ -218,22 +218,23 @@ async def on_server_remove(server):
 @client.event
 async def on_command_error(error,context):#The check functions for command shutdown failed.
   print(error)
+  await client.delete_message(msg)
   if isinstance(error, commands.NoPrivateMessage):
-    await bot.send_message(context.message.channel, "**private messages.** " + context.message.author.mention)
+    await client.send_message(context.message.channel, "**private messages.** " + context.message.author.mention,delete_after=10)
   if isinstance(error, commands.MissingRequiredArgument):
-    await bot.send_message(context.message.channel, "**Missing an argument.** " + context.message.author.mention)
+    await client.send_message(context.message.channel, "**Missing an argument.** " + context.message.author.mention,delete_after=10)
   elif isinstance(error, commands.DisabledCommand):
-    await bot.send_message(context.message.channel, "** Command is disabled.** " + context.message.author.mention)
+    await client.send_message(context.message.channel, "**Command is disabled.** " + context.message.author.mention,delete_after=10)
   elif isinstance(error, commands.CheckFailure):
-    await bot.send_message(context.message.channel, "**no permission.** " + context.message.author.mention)
+    await client.send_message(context.message.channel, "**No permission.** " + context.message.author.mention,delete_after=10)
   elif isinstance(error, commands.CommandNotFound):
-    await bot.send_message(context.message.channel, "**wrong command.** " + context.message.author.mention)
+    await client.send_message(context.message.channel, "**Wrong command.** " + context.message.author.mention,delete_after=10)
+  elif error == "HTTPException: BAD REQUEST (status code: 400)":
+    await client.send_message(context.message.channel, "**Too many characters.** " + context.message.author.mention,delete_after=10)
   else:
-    embed = discord.Embed(title=str(context.message.author)+"     "+str(context.message.content),description=str(error))
+    embed = discord.Embed(title=str(error),description=f'{context.message.author.mention}\n{context.message.content}')
     await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
-    msg = await client.send_message(context.message.channel,"You either dont have access to the command or you have entered something wrong."+context.message.author.mention)
-    await asyncio.sleep(10)
-    await client.delete_message(msg)
+    await client.send_message(context.message.channel,"You either dont have access to the command or you have entered something wrong."+context.message.author.mention,delete_after=10)
 
 #Tells the user where the info about the movies and tv shows are from.
 @client.command(description="Infomation for where the data is from.",brief="Infomation for where the data is from.",pass_context=True,aliases=["Info"])
@@ -260,6 +261,35 @@ async def request(context, *args):
   await client.send_message(discord.Object(id='538720732499410968'),embed=embed)
   await client.say("Your request has been logged",delete_after=10)
 
+@client.command(description="",brief="",pass_context=True,aliases=["Search"])
+async def search(context, *args):
+  pass
+
+#Lists all movie entrys to database.
+@client.command(description="Lists all movies/tv in databse. (?list)",brief="Lists all movies/tv in databse.",pass_context=True, aliases=["List"])
+async def list(context, *args):
+  await client.delete_message(context.message)
+  globals()[context.message.author] = arrowPages(context,args)
+  await globals()[context.message.author].display()
+
+#Gets watched list from database
+@client.command(description="Used to check what someone has watched. (?watched or ?watched mention)",brief="Used to check what someone has watched.",pass_context=True, aliases=["Watched"])
+async def watched(context, *args):
+  await client.delete_message(context.message)
+  globals()[context.message.author] = arrowPages(context,args)
+  await globals()[context.message.author].display()
+
+#Used with list command to get more info on a given movie or tv show.
+@client.command(description="",brief="",pass_context=True,aliases=["Select"])
+async def select(context, arg=None):
+  await client.delete_message(context.message)
+  if arg is None:
+    await client.say("You have to enter an option to use this command")
+  elif arg.isdigit() and context.message.author in globals():
+    await globals()[context.message.author].expand(int(arg))
+  else:
+    await client.say("That is not a valid option")
+
 #Adds or updates the users watch list in database.
 @client.command(description="Use when you want to save what movie or episode you have watched. (?watch TITLE season# episode#)",brief="Use when you want to save what movie or episode you have watched.",pass_context=True, aliases=["Watch"])
 async def watch(context,*args):
@@ -281,30 +311,6 @@ async def watch(context,*args):
     new_watched(userID,movieID,episode)
   await client.say("Your watched list has been updated "+context.message.author.mention,delete_after=10)
 
-#Gets watched list from database
-@client.command(description="Used to check what someone has watched. (?watched or ?watched mention)",brief="Used to check what someone has watched.",pass_context=True, aliases=["Watched"])
-async def watched(context, *args):
-  await client.delete_message(context.message)
-  globals()[context.message.author] = arrowPages(context,args)
-  await globals()[context.message.author].display()
-
-#Lists all movie entrys to database.
-@client.command(description="Lists all movies/tv in databse. (?list)",brief="Lists all movies/tv in databse.",pass_context=True, aliases=["List"])
-async def list(context, *args):
-  await client.delete_message(context.message)
-  globals()[context.message.author] = arrowPages(context,args)
-  await globals()[context.message.author].display()
-
-#Used with list command to get more info on a given movie or tv show.
-@client.command(description="",brief="",pass_context=True,aliases=["Select"])
-async def select(context, arg=None):
-  await client.delete_message(context.message)
-  if arg is None:
-    await client.say("You have to enter an option to use this command")
-  elif arg.isdigit() and context.message.author in globals():
-    await globals()[context.message.author].expand(int(arg))
-  else:
-    await client.say("That is not a valid option")
 
 #Changes the bot to the maintenance version.
 @commands.check(is_me)
