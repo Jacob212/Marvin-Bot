@@ -44,13 +44,8 @@ def getIDS(discordID,primaryTitle,season):
   movieID = b[0][1]
   return userID,movieID
 
-def getWatchedID(discordID,genre,titleType):
-  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Watched.episode, Movies.tconst FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[userID] = Watched.[userID]) ON Movies.[movieID] = Watched.[movieID] WHERE (Members.discordID) = ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? ORDER BY Movies.primaryTitle, Movies.season;",(discordID,titleType,genre))
-  conn.commit()
-  return c.fetchall()
-
-def getWatchedMovie(title,season="\\N"):
-  c.execute("SELECT Members.Username, Watched.Episode FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[UserID] = Watched.[UserID]) ON Movies.[MovieID] = Watched.[MovieID] WHERE ((Movies.Title)=?) AND ((Movies.Season)=?);",(title,season))
+def getWatchedID(discordID,primaryTitle,titleType,genre,year):
+  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Watched.episode, Movies.tconst FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[userID] = Watched.[userID]) ON Movies.[movieID] = Watched.[movieID] WHERE (Members.discordID) = ? AND (Movies.primaryTitle) LIKE ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? AND (Movies.releaseYear) LIKE ? ORDER BY Movies.primaryTitle, Movies.season;",(discordID,primaryTitle,titleType,genre,year))
   conn.commit()
   return c.fetchall()
 
@@ -76,8 +71,8 @@ def getMoviesLike(genre,titleType):
   conn.commit()
   return c.fetchall()
 
-def getMoviesLikeLimit(genre,titleType,offSet):
-  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes, Movies.tconst, Movies.releaseYear, Movies.runtimeMinutes, Movies.genre, Movies.originalTitle FROM Movies WHERE (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(titleType,genre,offSet))
+def getMoviesLikeLimit(primaryTitle,titleType,genre,year,offSet):
+  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes, Movies.tconst, Movies.releaseYear, Movies.runtimeMinutes, Movies.genre, Movies.originalTitle FROM Movies WHERE (Movies.primaryTitle) LIKE ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? AND (Movies.releaseYear) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(primaryTitle,titleType,genre,year,offSet))
   return c.fetchall()
 
 def getLastFive():
@@ -94,20 +89,17 @@ def getLength():
 def is_me(context):
   return context.message.author.id == "130470072190894082"
 
-def didReact(users,author):
-  for i in range(len(users)):
-    if users[i] == author:
-      return True
-  return False
-
 class arrowPages():
   def __init__(self,context,args):
     self.context = context
     self.id = None
     self.mention = None
     self.titleType = "%"
+    self.title = "%"
     self.genre = "%"
+    self.year = "%"
     genres = []
+    title = []
     for arg in args:
       if arg.lower() == "tv":
         self.titleType = "tvSeries"
@@ -118,21 +110,26 @@ class arrowPages():
         self.mention = arg
       elif arg in allGenres:
         genres.append(arg)
+      elif arg.isdigit() and len(arg) == 4:
+        self.year = f'%{arg}%'
+      else:
+        title.append(arg)
     genres.sort()
+    self.title = f'%{" ".join(title)}%'
     self.genre = f'%{"%".join(genres)}%'
 
   async def display(self,header=None):
     page = 1
     while True:
       if str(self.context.command) == "list":
-        self.movies = getMoviesLikeLimit(self.genre,self.titleType,(page-1)*10)
+        self.movies = getMoviesLikeLimit(self.title,self.titleType,self.genre,self.year,(page-1)*10)
         embed = discord.Embed(title="Listing titles in database",color=self.context.message.author.color.value)
       elif str(self.context.command) == "watched":
         if self.id is None:
-          self.movies = getWatchedID(self.context.message.author.id,self.genre,self.titleType)
+          self.movies = getWatchedID(self.context.message.author.id,self.title,self.titleType,self.genre,self.year)
           embed = discord.Embed(title="Listing titles watched by "+self.context.message.author.name,color=self.context.message.author.color.value)
         else:
-          self.movies = getWatchedID(self.id,self.genre,self.titleType)
+          self.movies = getWatchedID(self.id,self.title,self.titleType,self.genre,self.year)
           embed = discord.Embed(title="Listing titles watched by "+self.mention,color=self.context.message.author.color.value)
       message = ""
       count = 0
@@ -157,8 +154,8 @@ class arrowPages():
       await client.remove_reaction(self.msg, "▶", self.context.message.author)
       await client.remove_reaction(self.msg, "◀", self.context.message.author)
 
-  async def expand(self,index):#Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes, Movies.tconst, Movies.releaseYear, Movies.runtimeMinutes, Movies.genre, Movies.originalTitle
-    embed = discord.Embed(title=self.movies[index][1],description=self.movies[index][2]+self.movies[index][3],url=f'https://www.imdb.com/title/{self.movies[index][4]}/?ref_=fn_al_tt_1',color=16727013)
+  async def expand(self,index):
+    embed = discord.Embed(title=self.movies[index][1],description=self.movies[index][2]+self.movies[index][3],url=f'https://www.imdb.com/title/{self.movies[index][4]}/?ref_=fn_al_tt_1',color=self.context.message.author.color.value)
     embed.add_field(name="Original Title",value=self.movies[index][8])
     embed.add_field(name="Release Year",value=self.movies[index][5])
     embed.add_field(name="Run Time",value=self.movies[index][6])
@@ -218,23 +215,24 @@ async def on_server_remove(server):
 @client.event
 async def on_command_error(error,context):#The check functions for command shutdown failed.
   print(error)
-  await client.delete_message(msg)
   if isinstance(error, commands.NoPrivateMessage):
-    await client.send_message(context.message.channel, "**private messages.** " + context.message.author.mention,delete_after=10)
+    msg = await client.send_message(context.message.channel, "**private messages.** " + context.message.author.mention)
   if isinstance(error, commands.MissingRequiredArgument):
-    await client.send_message(context.message.channel, "**Missing an argument.** " + context.message.author.mention,delete_after=10)
+    msg = await client.send_message(context.message.channel, "**Missing an argument.** " + context.message.author.mention)
   elif isinstance(error, commands.DisabledCommand):
-    await client.send_message(context.message.channel, "**Command is disabled.** " + context.message.author.mention,delete_after=10)
+    msg = await client.send_message(context.message.channel, "**Command is disabled.** " + context.message.author.mention)
   elif isinstance(error, commands.CheckFailure):
-    await client.send_message(context.message.channel, "**No permission.** " + context.message.author.mention,delete_after=10)
+    msg = await client.send_message(context.message.channel, "**No permission.** " + context.message.author.mention)
   elif isinstance(error, commands.CommandNotFound):
-    await client.send_message(context.message.channel, "**Wrong command.** " + context.message.author.mention,delete_after=10)
+    msg = await client.send_message(context.message.channel, "**Wrong command.** " + context.message.author.mention)
   elif error == "HTTPException: BAD REQUEST (status code: 400)":
-    await client.send_message(context.message.channel, "**Too many characters.** " + context.message.author.mention,delete_after=10)
+    msg = await client.send_message(context.message.channel, "**Too many characters.** " + context.message.author.mention)
   else:
     embed = discord.Embed(title=str(error),description=f'{context.message.author.mention}\n{context.message.content}')
     await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
-    await client.send_message(context.message.channel,"You either dont have access to the command or you have entered something wrong."+context.message.author.mention,delete_after=10)
+    msg = await client.send_message(context.message.channel,"You either dont have access to the command or you have entered something wrong."+context.message.author.mention)
+  await asyncio.sleep(10)
+  await client.delete_message(msg)
 
 #Tells the user where the info about the movies and tv shows are from.
 @client.command(description="Infomation for where the data is from.",brief="Infomation for where the data is from.",pass_context=True,aliases=["Info"])
@@ -261,12 +259,8 @@ async def request(context, *args):
   await client.send_message(discord.Object(id='538720732499410968'),embed=embed)
   await client.say("Your request has been logged",delete_after=10)
 
-@client.command(description="",brief="",pass_context=True,aliases=["Search"])
-async def search(context, *args):
-  pass
-
 #Lists all movie entrys to database.
-@client.command(description="Lists all movies/tv in databse. (?list)",brief="Lists all movies/tv in databse.",pass_context=True, aliases=["List"])
+@client.command(description="You can sort by year, genre, type(movie or tv) and title. If the title has a year in it, it will sort by that year and might get the title wrong.",brief="Used to sort through everthing in the database",pass_context=True, aliases=["List"])
 async def list(context, *args):
   await client.delete_message(context.message)
   globals()[context.message.author] = arrowPages(context,args)
