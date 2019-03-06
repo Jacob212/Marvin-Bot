@@ -38,7 +38,6 @@ def new_watched(userID,movieID,episode):
 
 def getIDS(discordID,primaryTitle,season):
   c.execute("SELECT Members.userID, Movies.movieID FROM Movies,Members WHERE (((Members.[discordID])=?) AND ((Movies.[primaryTitle])=?) AND ((Movies.[season])=?));",(int(discordID),primaryTitle,season))
-  conn.commit()
   b = c.fetchall()
   userID = b[0][0]
   movieID = b[0][1]
@@ -46,16 +45,13 @@ def getIDS(discordID,primaryTitle,season):
 
 def getWatchedID(discordID,primaryTitle,titleType,genre,year):
   c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Watched.episode, Movies.tconst FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[userID] = Watched.[userID]) ON Movies.[movieID] = Watched.[movieID] WHERE (Members.discordID) = ? AND (Movies.primaryTitle) LIKE ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? AND (Movies.releaseYear) LIKE ? ORDER BY Movies.primaryTitle, Movies.season;",(discordID,primaryTitle,titleType,genre,year))
-  conn.commit()
   return c.fetchall()
 
 def updateWatched(discordID,primaryTitle,episode):
   c.execute("UPDATE Watched SET episode = ? WHERE (UserID = (SELECT UserID FROM Members WHERE DiscordID = ?)) AND (MovieID = (SELECT MovieID FROM Movies WHERE primaryTitle = ?));",(episode,discordID,primaryTitle))
-  conn.commit()
 
 def checkWatched(discordID,primaryTitle,season):#Checks to see if someone has already watched an episode already(False if the have not and True if they have)
   c.execute("SELECT Members.discordID, Movies.primaryTitle, Movies.season FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[UserID] = Watched.[UserID]) ON Movies.[MovieID] = Watched.[MovieID] WHERE (((Members.discordID) = ?) AND ((Movies.primaryTitle)=?) AND ((Movies.season)=?));",(discordID,primaryTitle,season))
-  conn.commit()
   if c.fetchall() == []:
     return False
   else:
@@ -63,12 +59,10 @@ def checkWatched(discordID,primaryTitle,season):#Checks to see if someone has al
 
 def getMovies():
   c.execute("SELECT Movies.primaryTitle, Movies.season, Movies.episodes FROM Movies ORDER BY Movies.primaryTitle, Movies.season;")
-  conn.commit()
   return c.fetchall()
 
 def getMoviesLike(genre,titleType):
   c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes FROM Movies WHERE (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? ORDER BY Movies.primaryTitle, Movies.season;",(titleType,genre))
-  conn.commit()
   return c.fetchall()
 
 def getMoviesLikeLimit(primaryTitle,titleType,genre,year,offSet):
@@ -77,12 +71,10 @@ def getMoviesLikeLimit(primaryTitle,titleType,genre,year,offSet):
 
 def getLastFive():
   c.execute("SELECT primaryTitle,season FROM Movies ORDER BY movieID DESC LIMIT 0,5")
-  conn.commit()
   return c.fetchall()
 
 def getLength():
   c.execute("SELECT count(*) FROM Movies")
-  conn.commit()
   return c.fetchone()[0]
 
 #checks to see if user is me
@@ -127,10 +119,11 @@ class arrowPages():
       elif str(self.context.command) == "watched":
         if self.id is None:
           self.movies = getWatchedID(self.context.message.author.id,self.title,self.titleType,self.genre,self.year)
-          embed = discord.Embed(title="Listing titles watched by "+self.context.message.author.name,color=self.context.message.author.color.value)
+          embed = discord.Embed(title="Listing titles watched by "+self.context.message.author.display_name,color=self.context.message.author.color.value)
         else:
+          member = discord.utils.get(self.context.message.server.members, id=self.id)
           self.movies = getWatchedID(self.id,self.title,self.titleType,self.genre,self.year)
-          embed = discord.Embed(title="Listing titles watched by "+self.mention,color=self.context.message.author.color.value)
+          embed = discord.Embed(title="Listing titles watched by "+member.display_name,color=self.context.message.author.color.value)
       message = ""
       count = 0
       for movie in self.movies:
@@ -195,7 +188,7 @@ async def on_ready():
   print(client.user.name)
   print(client.user.id)
   print('------')
-  #await client.change_presence(game=Game(name="?help"))
+  await client.change_presence(game=Game(name="?help"))
 
 #logs when the bot has been invited to a server
 @client.event
@@ -329,7 +322,7 @@ async def get(context, *args):
   await client.delete_message(context.message)
   print(args)
 
-client.loop.create_task(change_status())
+#client.loop.create_task(change_status())
 client.run(TOKEN)
 c.close()
 conn.close()
