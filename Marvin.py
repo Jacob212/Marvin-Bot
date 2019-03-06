@@ -49,6 +49,7 @@ def getWatchedID(discordID,primaryTitle,titleType,genre,year):
 
 def updateWatched(discordID,primaryTitle,episode):
   c.execute("UPDATE Watched SET episode = ? WHERE (UserID = (SELECT UserID FROM Members WHERE DiscordID = ?)) AND (MovieID = (SELECT MovieID FROM Movies WHERE primaryTitle = ?));",(episode,discordID,primaryTitle))
+  conn.commit()
 
 def checkWatched(discordID,primaryTitle,season):#Checks to see if someone has already watched an episode already(False if the have not and True if they have)
   c.execute("SELECT Members.discordID, Movies.primaryTitle, Movies.season FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[UserID] = Watched.[UserID]) ON Movies.[MovieID] = Watched.[MovieID] WHERE (((Members.discordID) = ?) AND ((Movies.primaryTitle)=?) AND ((Movies.season)=?));",(discordID,primaryTitle,season))
