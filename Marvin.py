@@ -126,13 +126,16 @@ class arrowPages():
           embed = discord.Embed(title="Listing titles watched by "+member.display_name,color=self.context.message.author.color.value)
       message = ""
       count = 0
-      for movie in self.movies:
-        if movie[0] == "movie":
-          message += str(count)+": "+movie[1]+"\n"
-        elif movie[0] == "tvSeries":
-          message += str(count)+": "+movie[1]+" Season: "+str(movie[2])+" Episode: "+str(movie[3])+"\n"
-        count += 1
-      embed.add_field(name="Page: "+str(page),value=message,inline=False)
+      if self.movies != []:
+        for movie in self.movies:
+          if movie[0] == "movie":
+            message += str(count)+": "+movie[1]+"\n"
+          elif movie[0] == "tvSeries":
+            message += str(count)+": "+movie[1]+" Season: "+str(movie[2])+" Episode: "+str(movie[3])+"\n"
+          count += 1
+        embed.add_field(name="Page: "+str(page),value=message,inline=False)
+      else:
+        embed.add_field(name="Page: "+str(page),value="There is nothing to display",inline=False)
       try:
         await client.edit_message(self.msg,embed=embed)
       except:
@@ -148,13 +151,16 @@ class arrowPages():
       await client.remove_reaction(self.msg, "◀", self.context.message.author)
 
   async def expand(self,index):
-    embed = discord.Embed(title=self.movies[index][1],description=self.movies[index][2]+self.movies[index][3],url=f'https://www.imdb.com/title/{self.movies[index][4]}/?ref_=fn_al_tt_1',color=self.context.message.author.color.value)
-    embed.add_field(name="Original Title",value=self.movies[index][8])
-    embed.add_field(name="Release Year",value=self.movies[index][5])
-    embed.add_field(name="Run Time",value=self.movies[index][6])
-    embed.add_field(name="Season",value=self.movies[index][2])
-    embed.add_field(name="Episodes",value=self.movies[index][3])
-    embed.add_field(name="Genres",value=self.movies[index][7])
+    if index <= len(self.movies):
+      embed = discord.Embed(title=self.movies[index][1],description=".....",url=f'https://www.imdb.com/title/{self.movies[index][4]}/?ref_=fn_al_tt_1',color=self.context.message.author.color.value)
+      embed.add_field(name="Original Title",value=self.movies[index][8])
+      embed.add_field(name="Release Year",value=self.movies[index][5])
+      embed.add_field(name="Run Time",value=self.movies[index][6])
+      embed.add_field(name="Season",value=self.movies[index][2])
+      embed.add_field(name="Episodes",value=self.movies[index][3])
+      embed.add_field(name="Genres",value=self.movies[index][7])
+    else:
+      embed = discord.Embed(title="That is not an option",description="Please go back",color=discord.Colour.dark_red())
     await client.edit_message(self.msg,embed=embed)
     await client.remove_reaction(self.msg, "▶", client.user)
     while True:
