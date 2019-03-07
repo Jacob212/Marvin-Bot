@@ -309,7 +309,7 @@ async def watch(context,*args):
 #Changes the bot to the maintenance version.
 @commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["Switch"])
-async def switch(context):
+async def down(context):
   await client.delete_message(context.message)
   await client.close()
   print("Changing to maintenance version")

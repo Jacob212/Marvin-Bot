@@ -32,14 +32,24 @@ async def on_command_error(error,context):
 @commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["Start"])
 async def start(context):
+  await client.delete_message(context.message)
   await client.close()
   print("Changing to live version")
-  os.system('python Marvin.py')
+  os.system("python Marvin.py")
+
+#Pulls latest version from github.
+@commands.check(is_me)
+@client.command(hidden=True,pass_context=True, aliases=["Update"])
+async def update(context):
+  await client.delete_message(context.message)
+  print("Updating from github")
+  os.system("git pull")
 
 #Terminates the bot only if they have the role Owner.
 @commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["Shutdown"])
 async def shutdown(context):
+  await client.delete_message(context.message)
   await client.close()
 
 
