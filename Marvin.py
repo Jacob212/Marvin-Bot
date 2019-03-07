@@ -43,8 +43,8 @@ def getIDS(discordID,primaryTitle,season):
   movieID = b[0][1]
   return userID,movieID
 
-def getWatchedID(discordID,primaryTitle,titleType,genre,year):
-  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Watched.episode, Movies.tconst FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[userID] = Watched.[userID]) ON Movies.[movieID] = Watched.[movieID] WHERE (Members.discordID) = ? AND (Movies.primaryTitle) LIKE ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? AND (Movies.releaseYear) LIKE ? ORDER BY Movies.primaryTitle, Movies.season;",(discordID,primaryTitle,titleType,genre,year))
+def getWatchedID(discordID,primaryTitle,titleType,genre,year,offset):
+  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Watched.episode, Movies.tconst FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[userID] = Watched.[userID]) ON Movies.[movieID] = Watched.[movieID] WHERE (Members.discordID) = ? AND (Movies.primaryTitle) LIKE ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? AND (Movies.releaseYear) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(discordID,primaryTitle,titleType,genre,year,offset))
   return c.fetchall()
 
 def updateWatched(discordID,primaryTitle,episode):
@@ -66,8 +66,8 @@ def getMoviesLike(genre,titleType):
   c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes FROM Movies WHERE (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? ORDER BY Movies.primaryTitle, Movies.season;",(titleType,genre))
   return c.fetchall()
 
-def getMoviesLikeLimit(primaryTitle,titleType,genre,year,offSet):
-  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes, Movies.tconst, Movies.releaseYear, Movies.runtimeMinutes, Movies.genre, Movies.originalTitle FROM Movies WHERE (Movies.primaryTitle) LIKE ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? AND (Movies.releaseYear) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(primaryTitle,titleType,genre,year,offSet))
+def getMoviesLikeLimit(primaryTitle,titleType,genre,year,offset):
+  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes, Movies.tconst, Movies.releaseYear, Movies.runtimeMinutes, Movies.genre, Movies.originalTitle FROM Movies WHERE (Movies.primaryTitle) LIKE ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? AND (Movies.releaseYear) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(primaryTitle,titleType,genre,year,offset))
   return c.fetchall()
 
 def getLastFive():
@@ -119,11 +119,11 @@ class arrowPages():
         embed = discord.Embed(title="Listing titles in database",color=self.context.message.author.color.value)
       elif str(self.context.command) == "watched":
         if self.id is None:
-          self.movies = getWatchedID(self.context.message.author.id,self.title,self.titleType,self.genre,self.year)
+          self.movies = getWatchedID(self.context.message.author.id,self.title,self.titleType,self.genre,self.year,(page-1)*10)
           embed = discord.Embed(title="Listing titles watched by "+self.context.message.author.display_name,color=self.context.message.author.color.value)
         else:
           member = discord.utils.get(self.context.message.server.members, id=self.id)
-          self.movies = getWatchedID(self.id,self.title,self.titleType,self.genre,self.year)
+          self.movies = getWatchedID(self.id,self.title,self.titleType,self.genre,self.year,(page-1)*10)
           embed = discord.Embed(title="Listing titles watched by "+member.display_name,color=self.context.message.author.color.value)
       message = ""
       count = 0
