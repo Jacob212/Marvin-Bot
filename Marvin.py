@@ -235,7 +235,7 @@ async def on_command_error(error,context):#The check functions for command shutd
   await client.delete_message(msg)
 
 #Tells the user where the info about the movies and tv shows are from.
-@client.command(description="Infomation for where the data is from.",brief="Infomation for where the data is from.",pass_context=True,aliases=["Info"])
+@client.command(description="Infomation for where the data is from.",brief="Infomation for where the data is from. :)",pass_context=True,aliases=["Info"])
 async def info(context):
   await client.delete_message(context.message)
   embed = discord.Embed(title="Information courtesy of",description="IMDB\nhttp://www.imdb.com\nUsed with permission",color=context.message.author.color.value)
