@@ -45,8 +45,9 @@ async def start(context):
 async def update(context):
   await client.delete_message(context.message)
   print("Updating from github")
-  returned_value = subprocess.check_output("git pull")
+  returned_value = subprocess.check_output("git pull", shell=True)
   print("Git update status:",returned_value.decode("utf-8"))
+  os.system("git pull")
 
 #Terminates the bot only if they have the role Owner.
 @commands.check(is_me)
