@@ -59,7 +59,7 @@ async def start(context):
 async def update(context):
   await client.delete_message(context.message)
   returned_value = subprocess.check_output("git pull", shell=True)
-  embed = discord.Embed(title="Github Updates",description=f'{returned_value.decode("utf-8")}',color=discord.Colour.Green())
+  embed = discord.Embed(title="Github Updates",description=f'{returned_value.decode("utf-8")}',color=discord.Colour.green())
   await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
 
 #Terminates the bot only if they have the role Owner.

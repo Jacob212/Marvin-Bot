@@ -200,14 +200,14 @@ async def on_ready():
 #logs when the bot has been invited to a server
 @client.event
 async def on_server_join(server):
-  embed = discord.Embed(title=str(client.user)+" has joined: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color= 16727013)
+  embed = discord.Embed(title=str(client.user)+" has joined: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color=16727013)
   embed.set_thumbnail(url=str(server.icon_url))
-  await client.send_message(discord.Object(id='538719054479884300'),embed=embed)
+  await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
 
 #logs when the bot has been kicked from a server
 @client.event
 async def on_server_remove(server):
-  embed = discord.Embed(title=str(client.user)+" has been removed from: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color= 16727013)
+  embed = discord.Embed(title=str(client.user)+" has been removed from: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color=16727013)
   embed.set_thumbnail(url=str(server.icon_url))
   await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
 
