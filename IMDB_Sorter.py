@@ -3,6 +3,7 @@ import os
 import time
 import sqlite3
 import re
+import gzip
 from operator import itemgetter
 
 conn = sqlite3.connect('Discord.db')
@@ -22,7 +23,7 @@ def setup():
   if os.path.isfile('./IMDBSorted/allMovies.tsv') and os.path.isfile('./IMDBSorted/allTV.tsv'):
     menu()
   else:
-    print("Sorting movies and tv series")
+    print("Running setup. This could take a minute.")
     start_time = time.time()
     basics = open("./basics/data.tsv", mode="r", encoding="utf-8")
     movie = []
@@ -35,10 +36,7 @@ def setup():
       elif words[1] == "tvSeries":
         tv.append(line)
     basics.close()
-    print("Finished in "+get_time(start_time))
 
-    print("summing languages")
-    start_time = time.time()
     akas = open("./akas/data.tsv", mode="r", encoding="utf-8")
     sumLanguages = []
     total = []
@@ -63,10 +61,7 @@ def setup():
             countries = [words[3]]
     sumLanguages.append(total[0]+"\t"+",".join(countries)+"\t"+",".join(languages))
     akas.close()
-    print("Finished in "+get_time(start_time))
 
-    print("adding languages to movies")
-    start_time = time.time()
     short = open("./IMDBSorted/allMovies.tsv", mode="w", encoding="utf-8")
     index = 0
     for line in movie:
@@ -87,10 +82,7 @@ def setup():
       if done == 0:
         short.write(line+"\tNone\tNone\tNone\tNone\n")
     short.close()
-    print("Finished in "+get_time(start_time))
 
-    print("adding languages to tv")
-    start_time = time.time()
     tvLanguages = []
     index = 0
     for line in tv:
@@ -110,10 +102,7 @@ def setup():
           break
       if done == 0:
         tvLanguages.append(line+"\tNone\tNone\n")
-    print("Finished in "+get_time(start_time))
 
-    print("Splitting lines with season and episode numbers up from the ones without.")
-    start_time = time.time()
     episodes = open("./episodes/data.tsv", mode="r", encoding="utf-8")
     info = []
     noInfo = []
@@ -126,10 +115,7 @@ def setup():
         noInfo.append(words)
     episodes.close()
     info = sorted(info,key=lambda x:(x[1],int(x[2]),int(x[3])))
-    print("Finished in "+get_time(start_time))
 
-    print("Adding up total episodes in each season.")
-    start_time = time.time()
     numbers = []
     total = []
     for line in info:
@@ -142,10 +128,7 @@ def setup():
           numbers.append(total[0]+"\t"+str(len(total)))
           total = [line[1]+"\t"+line[2]]
     numbers.append(total[0]+"\t"+str(len(total)))
-    print("Finished in "+get_time(start_time))
 
-    print("Adding season and episode numbers to all the other info.")
-    start_time = time.time()
     short = open("./IMDBSorted/allTV.tsv", mode="w", encoding="utf-8")
     index = 0
     for line in tvLanguages:
@@ -259,21 +242,19 @@ def importFile(file):
     if words[12] == "None":
       season = None
       c.execute('''SELECT Movies.primaryTitle FROM Movies WHERE primaryTitle = "'''+primaryTitle+'''" AND season is null ORDER BY Movies.primaryTitle, Movies.season;''')
-      conn.commit()
     else:
       season = words[11]
       c.execute('''SELECT Movies.primaryTitle FROM Movies WHERE primaryTitle = "'''+primaryTitle+'''" AND season = "'''+str(season)+'''" ORDER BY Movies.primaryTitle, Movies.season;''')
-      conn.commit()
     result = c.fetchall()
     if result == []:
       c.execute('''INSERT INTO Movies VALUES(?,?,?,?,?,?,?,?,?,?,?)''', (None,titleType,primaryTitle,originalTitle,season,episodes,releaseYear,runtimeMinutes,languages,genres,tconst))
-      conn.commit()
       imported += 1
     else:
       notImported += 1
     if (time.time()-tenSeconds) > 10:
       print("Imported: "+str(imported)+"| Already in database: "+str(notImported)+"| Total time: "+get_time(start_time))
       tenSeconds = time.time()
+  conn.commit()
   importFile.close()
   print("Imported: "+str(imported)+"| Already in database: "+str(notImported)+"| Total time: "+get_time(start_time)+"\nFinshed")
 
