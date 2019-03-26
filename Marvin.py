@@ -29,26 +29,19 @@ for genre in genres:
   allGenres.append(genre.lower())
 
 def new_member(discordID,name):
-  c.execute("INSERT INTO members VALUES(?,?,?)", (None,discordID,name))
+  c.execute("INSERT INTO Members VALUES(?,?,?)", (None,discordID,name))
   conn.commit()
 
-def new_watched(userID,movieID,episode):
-  c.execute("INSERT INTO watched VALUES(?,?,?,?)", (None,userID,movieID,episode))
+def new_watched(discordID,primaryTitle,season,episode):
+  c.execute("INSERT INTO Watched VALUES(?,(SELECT userID FROM Members WHERE discordID = ?),(SELECT movieID FROM Movies WHERE primaryTitle = ? and season = ?),?)", (None,discordID,primaryTitle,season,episode))
   conn.commit()
-
-def getIDS(discordID,primaryTitle,season):
-  c.execute("SELECT Members.userID, Movies.movieID FROM Movies,Members WHERE (((Members.[discordID])=?) AND ((Movies.[primaryTitle])=?) AND ((Movies.[season])=?));",(int(discordID),primaryTitle,season))
-  b = c.fetchall()
-  userID = b[0][0]
-  movieID = b[0][1]
-  return userID,movieID
 
 def getWatchedID(discordID,primaryTitle,titleType,genre,year,offset):
   c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Watched.episode, Movies.tconst FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[userID] = Watched.[userID]) ON Movies.[movieID] = Watched.[movieID] WHERE (Members.discordID) = ? AND (Movies.primaryTitle) LIKE ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? AND (Movies.releaseYear) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(discordID,primaryTitle,titleType,genre,year,offset))
   return c.fetchall()
 
-def updateWatched(discordID,primaryTitle,episode):
-  c.execute("UPDATE Watched SET episode = ? WHERE (UserID = (SELECT UserID FROM Members WHERE DiscordID = ?)) AND (MovieID = (SELECT MovieID FROM Movies WHERE primaryTitle = ?));",(episode,discordID,primaryTitle))
+def updateWatched(discordID,primaryTitle,season,episode):
+  c.execute("UPDATE Watched SET episode = ? WHERE (UserID = (SELECT UserID FROM Members WHERE DiscordID = ?)) AND (MovieID = (SELECT MovieID FROM Movies WHERE primaryTitle = ? AND season = ?));",(episode,discordID,primaryTitle,season))
   conn.commit()
 
 def checkWatched(discordID,primaryTitle,season):#Checks to see if someone has already watched an episode already(False if the have not and True if they have)
@@ -298,11 +291,10 @@ async def watch(context,*args):
     title = " ".join(args)
     episode = "\\N"
     season = "\\N"
-  userID,movieID = getIDS(str(context.message.author.id),title,season)
   if checkWatched(str(context.message.author.id),title,season) == True:
-    updateWatched(str(context.message.author.id),title,episode)
+    updateWatched(str(context.message.author.id),title,season,episode)
   else:
-    new_watched(userID,movieID,episode)
+    new_watched(str(context.message.author.id),title,season,episode)
   await client.say("Your watched list has been updated "+context.message.author.mention,delete_after=10)
 
 
