@@ -163,16 +163,9 @@ class arrowPages():
         break
       await client.remove_reaction(self.msg, "◀", self.context.message.author)
 
-#Updates the bots playing status with the last 5 titles that were added to the database
 async def change_status():
   await client.wait_until_ready()
-  games = getLastFive()
-  status = []
-  for x in range(0,5):
-    if games[x][1] == None:
-      status.append(games[x][0])
-    else:
-      status.append(games[x][0]+" Season "+str(games[x][1]))
+  status = ["?help",f'Servers: {len(client.servers)}']
   msgs = cycle(status)
   while not client.is_closed:
     await client.change_presence(game=discord.Game(name=next(msgs)))
@@ -188,21 +181,7 @@ async def on_ready():
   print(client.user.name)
   print(client.user.id)
   print('------')
-  await client.change_presence(game=Game(name="?help"))
-
-#logs when the bot has been invited to a server
-@client.event
-async def on_server_join(server):
-  embed = discord.Embed(title=str(client.user)+" has joined: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color=16727013)
-  embed.set_thumbnail(url=str(server.icon_url))
-  await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
-
-#logs when the bot has been kicked from a server
-@client.event
-async def on_server_remove(server):
-  embed = discord.Embed(title=str(client.user)+" has been removed from: "+str(server),description="ID: "+str(server.id)+" Owner: "+str(server.owner),color=16727013)
-  embed.set_thumbnail(url=str(server.icon_url))
-  await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
+  #await client.change_presence(game=Game(name="?help"))
 
 #Catches command errors. (check error)
 @client.event
@@ -297,7 +276,6 @@ async def watch(context,*args):
     new_watched(str(context.message.author.id),title,season,episode)
   await client.say("Your watched list has been updated "+context.message.author.mention,delete_after=10)
 
-
 #Changes the bot to the maintenance version.
 @commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["Switch"])
@@ -314,14 +292,15 @@ async def shutdown(context):
   await client.delete_message(context.message)
   await client.close()
 
-#Gets the id of emoji.
 @commands.check(is_me)
-@client.command(hidden=True,pass_context=True)
-async def get(context, *args):
-  await client.delete_message(context.message)
-  print(args)
+@client.command(hidden=True,pass_context=True, aliases=["Servers"])
+async def servers(context):#Needs to be changed later if too many servers.
+  embed = discord.Embed(title="List of servers that the bot is in",description=".....",color=context.message.author.color.value)
+  for server in client.servers:
+    embed.add_field(name=f'{server.name} - {server.id}',value=f'Owner: {server.owner.mention}  Members: {server.member_count}  Large: {server.large}  Features: {server.features}  Splash: {server.splash}  Region: {server.region}')
+  await client.say(embed=embed)
 
-#client.loop.create_task(change_status())
+client.loop.create_task(change_status())
 client.run(TOKEN)
 c.close()
 conn.close()
