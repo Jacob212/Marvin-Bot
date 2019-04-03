@@ -37,7 +37,7 @@ def new_watched(discordID,primaryTitle,season,episode):
   conn.commit()
 
 def getWatchedID(discordID,primaryTitle,titleType,genre,year,offset):
-  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Watched.episode, Movies.tconst FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[userID] = Watched.[userID]) ON Movies.[movieID] = Watched.[movieID] WHERE (Members.discordID) = ? AND (Movies.primaryTitle) LIKE ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? AND (Movies.releaseYear) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(discordID,primaryTitle,titleType,genre,year,offset))
+  c.execute("SELECT Movies.titleType, Movies.primaryTitle, Movies.season, Movies.episodes, Movies.tconst, Movies.releaseYear, Movies.runtimeMinutes, Movies.genre, Movies.originalTitle, Watched.episode FROM Movies INNER JOIN (Members INNER JOIN Watched ON Members.[userID] = Watched.[userID]) ON Movies.[movieID] = Watched.[movieID] WHERE (Members.discordID) = ? AND (Movies.primaryTitle) LIKE ? AND (Movies.titleType) LIKE ? AND (Movies.genre) LIKE ? AND (Movies.releaseYear) LIKE ? ORDER BY Movies.primaryTitle, Movies.season LIMIT ?,10;",(discordID,primaryTitle,titleType,genre,year,offset))
   return c.fetchall()
 
 def updateWatched(discordID,primaryTitle,season,episode):
@@ -125,7 +125,11 @@ class arrowPages():
           if movie[0] == "movie":
             message += str(count)+": "+movie[1]+"\n"
           elif movie[0] == "tvSeries":
-            message += str(count)+": "+movie[1]+" Season: "+str(movie[2])+" Episode: "+str(movie[3])+"\n"
+            if str(self.context.command) == "watched":
+              episodeDisplay = movie[9]
+            else:
+              episodeDisplay = movie[3]
+            message += str(count)+": "+movie[1]+" Season: "+str(movie[2])+" Episode: "+str(episodeDisplay)+"\n"
           count += 1
         embed.add_field(name="Page: "+str(page),value=message,inline=False)
       else:
@@ -295,6 +299,7 @@ async def shutdown(context):
 @commands.check(is_me)
 @client.command(hidden=True,pass_context=True, aliases=["Servers"])
 async def servers(context):#Needs to be changed later if too many servers.
+  await client.delete_message(context.message)
   embed = discord.Embed(title="List of servers that the bot is in",description=".....",color=context.message.author.color.value)
   for server in client.servers:
     embed.add_field(name=f'{server.name} - {server.id}',value=f'Owner: {server.owner.mention}  Members: {server.member_count}  Large: {server.large}  Features: {server.features}  Splash: {server.splash}  Region: {server.region}')
