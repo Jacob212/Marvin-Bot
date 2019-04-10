@@ -108,9 +108,11 @@ class arrowPages():
     page = 1
     while True:
       if str(self.context.command) == "list":
+        display_episode = "Episodes"
         self.movies = getMoviesLikeLimit(self.title,self.titleType,self.genre,self.year,(page-1)*10)
         embed = discord.Embed(title="Listing titles in database",color=self.context.message.author.color.value)
       elif str(self.context.command) == "watched":
+        display_episode = "Episode"
         if self.id is None:
           self.movies = getWatchedID(self.context.message.author.id,self.title,self.titleType,self.genre,self.year,(page-1)*10)
           embed = discord.Embed(title="Listing titles watched by "+self.context.message.author.display_name,color=self.context.message.author.color.value)
@@ -123,17 +125,17 @@ class arrowPages():
       if self.movies != []:
         for movie in self.movies:
           if movie[0] == "movie":
-            message += str(count)+": "+movie[1]+"\n"
+            message += f'{count}: {movie[1]}\n'
           elif movie[0] == "tvSeries":
             if str(self.context.command) == "watched":
               episodeDisplay = movie[9]
             else:
               episodeDisplay = movie[3]
-            message += str(count)+": "+movie[1]+" Season: "+str(movie[2])+" Episode: "+str(episodeDisplay)+"\n"
+            message += f'{count}: {movie[1]} Season: {movie[2]} {display_episode}: {episodeDisplay}\n'
           count += 1
-        embed.add_field(name="Page: "+str(page),value=message,inline=False)
+        embed.add_field(name=f'Page: {page}',value=message,inline=False)
       else:
-        embed.add_field(name="Page: "+str(page),value="There is nothing to display",inline=False)
+        embed.add_field(name=f'Page: {page}',value="There is nothing to display",inline=False)
       try:
         await client.edit_message(self.msg,embed=embed)
       except:
@@ -150,12 +152,17 @@ class arrowPages():
 
   async def expand(self,index):
     if index <= len(self.movies):
-      embed = discord.Embed(title=self.movies[index][1],description=".....",url=f'https://www.imdb.com/title/{self.movies[index][4]}/?ref_=fn_al_tt_1',color=self.context.message.author.color.value)
+      if self.movies[index][0] == "movie":
+        description = "Movie"
+      else:
+        description = "TV show"
+      embed = discord.Embed(title=self.movies[index][1],description=description,url=f'https://www.imdb.com/title/{self.movies[index][4]}/?ref_=fn_al_tt_1',color=self.context.message.author.color.value)
       embed.add_field(name="Original Title",value=self.movies[index][8])
       embed.add_field(name="Release Year",value=self.movies[index][5])
       embed.add_field(name="Run Time",value=self.movies[index][6])
-      embed.add_field(name="Season",value=self.movies[index][2])
-      embed.add_field(name="Episodes",value=self.movies[index][3])
+      if self.movies[index][0] == "tvSeries":
+        embed.add_field(name="Season",value=self.movies[index][2])
+        embed.add_field(name="Episodes",value=self.movies[index][3])
       embed.add_field(name="Genres",value=self.movies[index][7])
     else:
       embed = discord.Embed(title="That is not an option",description="Please go back",color=discord.Colour.dark_red())
