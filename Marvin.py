@@ -1,4 +1,3 @@
-from discord import Game
 from discord.ext import commands
 from discord.utils import get
 from itertools import cycle
@@ -73,7 +72,7 @@ def getLength():
 
 #checks to see if user is me
 def is_me(context):
-  return context.message.author.id == "130470072190894082"
+  return context.message.author.id == 130470072190894082
 
 class arrowPages():
   def __init__(self,context,args):
@@ -137,18 +136,18 @@ class arrowPages():
       else:
         embed.add_field(name=f'Page: {page}',value="There is nothing to display",inline=False)
       try:
-        await client.edit_message(self.msg,embed=embed)
+        await self.msg.edit(embed=embed)
       except:
-        self.msg = await client.say(embed=embed) 
-      await client.add_reaction(self.msg, "◀")
-      await client.add_reaction(self.msg, "▶")
-      res = await client.wait_for_reaction(["▶", "◀"], message=self.msg,user=self.context.message.author)
-      if res.reaction.emoji == "▶" and len(self.movies) == 10:
+        self.msg = await self.context.send(embed=embed)
+      await self.msg.add_reaction("◀")
+      await self.msg.add_reaction("▶")
+      reaction, user = await client.wait_for("reaction_add", check=lambda r, u: (r.emoji == "▶" or r.emoji == "◀") and u.id == self.context.message.author.id and r.message.id == self.msg.id)
+      if reaction.emoji == "▶" and len(self.movies) == 10:
         page += 1
-      elif res.reaction.emoji == "◀" and page != 1:
+      elif reaction.emoji == "◀" and page != 1:
         page -= 1
-      await client.remove_reaction(self.msg, "▶", self.context.message.author)
-      await client.remove_reaction(self.msg, "◀", self.context.message.author)
+      await self.msg.remove_reaction("▶",self.context.message.author)
+      await self.msg.remove_reaction("◀",self.context.message.author)
 
   async def expand(self,index):
     if index <= len(self.movies):
@@ -166,20 +165,20 @@ class arrowPages():
       embed.add_field(name="Genres",value=self.movies[index][7])
     else:
       embed = discord.Embed(title="That is not an option",description="Please go back",color=discord.Colour.dark_red())
-    await client.edit_message(self.msg,embed=embed)
-    await client.remove_reaction(self.msg, "▶", client.user)
+    await self.msg.edit(embed=embed)
+    await self.msg.remove_reaction("▶",client.user)
     while True:
-      res = await client.wait_for_reaction("◀", message=self.msg,user=self.context.message.author)
-      if res.reaction.emoji == "◀":
+      reaction, user = await client.wait_for("reaction_add", check=lambda r, u: r.message==self.msg and r.emoji == "◀" and u.id == self.context.message.author.id and r.message.id == self.msg.id)
+      if reaction.emoji == "◀":
         break
-      await client.remove_reaction(self.msg, "◀", self.context.message.author)
+      await self.msg.remove_reaction("◀",self.context.message.author)
 
 async def change_status():
   await client.wait_until_ready()
-  status = ["?help",f'Servers: {len(client.servers)}']
+  status = ["?help",f'Servers: {len(client.guilds)}']
   msgs = cycle(status)
-  while not client.is_closed:
-    await client.change_presence(game=discord.Game(name=next(msgs)))
+  while not client.is_closed():
+    await client.change_presence(activity=discord.Activity(name=next(msgs),type=3))
     await asyncio.sleep(10)
 
 client = commands.Bot(command_prefix="?")
@@ -192,85 +191,85 @@ async def on_ready():
   print(client.user.name)
   print(client.user.id)
   print('------')
-  #await client.change_presence(game=Game(name="?help"))
+  #await client.change_presence(activity=discord.Activity(name="?help",type=3))
 
 #Catches command errors. (check error)
 @client.event
-async def on_command_error(error,context):#The check functions for command shutdown failed.
+async def on_command_error(context,error):#The check functions for command shutdown failed.
   print(error)
   if isinstance(error, commands.NoPrivateMessage):
-    msg = await client.send_message(context.message.channel, "**private messages.** " + context.message.author.mention)
+    msg = await context.message.channel.send("**private messages.**" + context.message.author.mention)
   if isinstance(error, commands.MissingRequiredArgument):
-    msg = await client.send_message(context.message.channel, "**Missing an argument.** " + context.message.author.mention)
+    msg = await context.message.channel.send("**Missing an argument.**" + context.message.author.mention)
   elif isinstance(error, commands.DisabledCommand):
-    msg = await client.send_message(context.message.channel, "**Command is disabled.** " + context.message.author.mention)
+    msg = await context.message.channel.send("**Command is disabled.**" + context.message.author.mention)
   elif isinstance(error, commands.CheckFailure):
-    msg = await client.send_message(context.message.channel, "**No permission.** " + context.message.author.mention)
+    msg = await context.message.channel.send("**No permission.**" + context.message.author.mention)
   elif isinstance(error, commands.CommandNotFound):
-    msg = await client.send_message(context.message.channel, "**Wrong command.** " + context.message.author.mention)
+    msg = await context.message.channel.send("**Wrong command.**" + context.message.author.mention)
   elif error == "HTTPException: BAD REQUEST (status code: 400)":
-    msg = await client.send_message(context.message.channel, "**Too many characters.** " + context.message.author.mention)
+    msg = await context.message.channel.send("**Too many characters.**" + context.message.author.mention)
   else:
     embed = discord.Embed(title=str(error),description=f'{context.message.author.mention}\n{context.message.content}')
-    await client.send_message(discord.Object(id="538719054479884300"),embed=embed)
-    msg = await client.send_message(context.message.channel,"You either dont have access to the command or you have entered something wrong."+context.message.author.mention)
+    await client.get_channel(538719054479884300).send(embed=embed)
+    msg = await context.message.channel.send("You either dont have access to the command or you have entered something wrong."+context.message.author.mention)
   await asyncio.sleep(10)
-  await client.delete_message(msg)
+  await discord.Message.delete(msg)
 
 #Tells the user where the info about the movies and tv shows are from.
-@client.command(description="Infomation for where the data is from.",brief="Infomation for where the data is from. :)",pass_context=True,aliases=["Info"])
+@client.command(description="Infomation for where the data is from.",brief="Infomation for where the data is from. :)",aliases=["Info"])
 async def info(context):
-  await client.delete_message(context.message)
+  await context.message.delete()
   embed = discord.Embed(title="Information courtesy of",description="IMDB\nhttp://www.imdb.com\nUsed with permission",color=context.message.author.color.value)
-  await client.say(embed=embed,delete_after=10)   
+  await context.send(embed=embed,delete_after=10)   
 
 #Adds user to database
-@client.command(description="Adds you to bot database. (?add)",brief="Adds you to bot database.",pass_context=True, aliases=["Add"])
+@client.command(description="Adds you to bot database. (?add)",brief="Adds you to bot database.", aliases=["Add"])
 async def add(context):
-  await client.delete_message(context.message)
+  await context.message.delete()
   try:
     new_member(str(context.message.author.id),str(context.message.author))
-    await client.say("Added to system, " + context.message.author.mention,delete_after=10)
+    await context.send("Added to system, " + context.message.author.mention,delete_after=10)
   except:
-    await client.say("You are already in the system, " + context.message.author.mention,delete_after=10)
+    await context.send("You are already in the system, " + context.message.author.mention,delete_after=10)
 
 #User can request for new titles to be added
-@client.command(description="Request for a movie/tv to be added. If the message is more than 256 characters long it will not be logged. (?request MESSAGE)",brief="Request for a movie/tv to be added.",pass_context=True, aliases=["Request"])
+@client.command(description="Request for a movie/tv to be added. If the message is more than 256 characters long it will not be logged. (?request MESSAGE)",brief="Request for a movie/tv to be added.", aliases=["Request"])
 async def request(context, *args):
-  await client.delete_message(context.message)
+  await context.message.delete()
   embed = discord.Embed(title=" ".join(args),description=f'Request logged by {context.message.author.mention}',color=context.message.author.color.value)
-  await client.send_message(discord.Object(id='538720732499410968'),embed=embed)
-  await client.say("Your request has been logged",delete_after=10)
+  await client.get_channel(538720732499410968).send(embed=embed)
+  await context.send("Your request has been logged",delete_after=10)
 
 #Lists all movie entrys to database.
-@client.command(description="You can sort by year, genre, type(movie or tv) and title. If the title has a year in it, it will sort by that year and might get the title wrong.",brief="Used to sort through everthing in the database",pass_context=True, aliases=["List"])
+@client.command(description="You can sort by year, genre, type(movie or tv) and title. If the title has a year in it, it will sort by that year and might get the title wrong.",brief="Used to sort through everthing in the database", aliases=["List"])
 async def list(context, *args):
-  await client.delete_message(context.message)
+  await context.message.delete()
   globals()[context.message.author] = arrowPages(context,args)
   await globals()[context.message.author].display()
 
 #Gets watched list from database
-@client.command(description="Used to check what someone has watched. (?watched or ?watched mention)",brief="Used to check what someone has watched.",pass_context=True, aliases=["Watched"])
+@client.command(description="Used to check what someone has watched. (?watched or ?watched mention)",brief="Used to check what someone has watched.", aliases=["Watched"])
 async def watched(context, *args):
-  await client.delete_message(context.message)
+  await context.message.delete()
   globals()[context.message.author] = arrowPages(context,args)
   await globals()[context.message.author].display()
 
 #Used with list command to get more info on a given movie or tv show.
-@client.command(description="",brief="",pass_context=True,aliases=["Select"])
+@client.command(description="",brief="",aliases=["Select"])
 async def select(context, arg=None):
-  await client.delete_message(context.message)
+  await context.message.delete()
   if arg is None:
-    await client.say("You have to enter an option to use this command")
+    await context.send("You have to enter an option to use this command")
   elif arg.isdigit() and context.message.author in globals():
     await globals()[context.message.author].expand(int(arg))
   else:
-    await client.say("That is not a valid option")
+    await context.send("That is not a valid option")
 
 #Adds or updates the users watch list in database.
-@client.command(description="Use when you want to save what movie or episode you have watched. (?watch TITLE season# episode#)",brief="Use when you want to save what movie or episode you have watched.",pass_context=True, aliases=["Watch"])
+@client.command(description="Use when you want to save what movie or episode you have watched. (?watch TITLE season# episode#)",brief="Use when you want to save what movie or episode you have watched.", aliases=["Watch"])
 async def watch(context,*args):
-  await client.delete_message(context.message)
+  await context.message.delete()
   try:
     episode = args[-1]
     season = args[-2]
@@ -285,32 +284,32 @@ async def watch(context,*args):
     updateWatched(str(context.message.author.id),title,season,episode)
   else:
     new_watched(str(context.message.author.id),title,season,episode)
-  await client.say("Your watched list has been updated "+context.message.author.mention,delete_after=10)
+  await context.send("Your watched list has been updated "+context.message.author.mention,delete_after=10)
 
 #Changes the bot to the maintenance version.
 @commands.check(is_me)
-@client.command(hidden=True,pass_context=True, aliases=["Switch"])
+@client.command(hidden=True, aliases=["Switch"])
 async def down(context):
-  await client.delete_message(context.message)
+  await context.message.delete()
   await client.close()
   print("Changing to maintenance version")
   os.system('python Down.py')
 
 #Terminates the bot only if they have the role Owner.
 @commands.check(is_me)
-@client.command(hidden=True,pass_context=True, aliases=["Shutdown"])
+@client.command(hidden=True, aliases=["Shutdown"])
 async def shutdown(context):
-  await client.delete_message(context.message)
+  await context.message.delete()
   await client.close()
 
 @commands.check(is_me)
-@client.command(hidden=True,pass_context=True, aliases=["Servers"])
+@client.command(hidden=True, aliases=["Servers"])
 async def servers(context):#Needs to be changed later if too many servers.
-  await client.delete_message(context.message)
+  await context.message.delete()
   embed = discord.Embed(title="List of servers that the bot is in",description=".....",color=context.message.author.color.value)
-  for server in client.servers:
-    embed.add_field(name=f'{server.name} - {server.id}',value=f'Owner: {server.owner.mention}  Members: {server.member_count}  Large: {server.large}  Features: {server.features}  Splash: {server.splash}  Region: {server.region}')
-  await client.say(embed=embed)
+  for guild in client.guilds:
+    embed.add_field(name=f'{guild.name} - {guild.id}',value=f'Owner: {guild.owner.mention}  Members: {guild.member_count}  Large: {guild.large}  Features: {guild.features}  Splash: {guild.splash}  Region: {guild.region}')
+  await context.send(embed=embed)
 
 client.loop.create_task(change_status())
 client.run(TOKEN)
