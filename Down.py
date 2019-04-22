@@ -26,8 +26,7 @@ async def on_ready():
 
 @client.event
 async def on_command_error(context,error):
-  print(error)
-  await context.message.channel.send(context.message.author.mention+" Sorry, The bot is down for maintenance")
+  await context.message.channel.send(context.message.author.mention+" Sorry, The bot is down for maintenance",delete_after=10)
 
 #Changes the bot to the live version.
 @commands.check(is_me)

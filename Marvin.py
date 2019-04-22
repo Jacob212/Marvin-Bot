@@ -1,12 +1,10 @@
 from discord.ext import commands
-from discord.utils import get
 from itertools import cycle
 import asyncio
 import sqlite3
 import re
 import discord
 import os
-import math
 
 conn = sqlite3.connect("Discord.db")
 c = conn.cursor()
@@ -91,7 +89,7 @@ class arrowPages():
       elif arg.lower() == "movie":
         self.titleType = "movie"
       elif re.match("(<@!?)[0-9]*(>)",arg):
-        self.id = re.findall("\d+",arg)[0]
+        self.id = int(re.findall("\d+",arg)[0])
         self.mention = arg
       elif arg in allGenres:
         genres.append(arg)
@@ -116,7 +114,7 @@ class arrowPages():
           self.movies = getWatchedID(self.context.message.author.id,self.title,self.titleType,self.genre,self.year,(page-1)*10)
           embed = discord.Embed(title="Listing titles watched by "+self.context.message.author.display_name,color=self.context.message.author.color.value)
         else:
-          member = discord.utils.get(self.context.message.server.members, id=self.id)
+          member = client.get_user(self.id)
           self.movies = getWatchedID(self.id,self.title,self.titleType,self.genre,self.year,(page-1)*10)
           embed = discord.Embed(title="Listing titles watched by "+member.display_name,color=self.context.message.author.color.value)
       message = ""
