@@ -72,6 +72,8 @@ def setup():
   for genre in totalGenres:
     genres.write(genre+"\n")
   genres.close()
+  basic = []
+  totalGenres = []
 
   akas = gzip.open("./Datasets/title.akas.tsv.gz", mode="rt", encoding="utf-8")
   sumLanguages = []
@@ -114,6 +116,7 @@ def setup():
         break
     if done == 0:
       allTitles.append(words+["\\N","\\N","\\N","\\N"])
+  movie = []
 
   tvLanguages = []
   index = 0
@@ -131,6 +134,8 @@ def setup():
         break
     if done == 0:
       tvLanguages.append(words+["None","None"])
+  tv = []
+  
 
   episodes = gzip.open("./Datasets/title.episode.tsv.gz", mode="rt", encoding="utf-8")
   info = []
