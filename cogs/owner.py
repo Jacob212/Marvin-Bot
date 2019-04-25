@@ -67,7 +67,7 @@ class OwnerCog(commands.Cog):
   async def update_bot(self,ctx):
     await ctx.message.delete()
     try:
-      returned_value = subprocess.check_output("git fetch",shell=True)
+      returned_value = subprocess.check_output("git pull",shell=True)
       embed = discord.Embed(title="Github Update",description=f'{returned_value.decode("utf-8")}',color=discord.Colour.green())
     except Exception as e:
       embed = discord.Embed(title="Github Update Failed",description=f'Update failed with following error: {type(e).__name__} - {e}',color=discord.Colour.red())    
