@@ -2,7 +2,6 @@ import asyncio
 import discord
 from discord.ext import commands
 from itertools import cycle
-from sql import *
 
 f = open("Token.txt","r")#Reads bot token from text file.
 TOKEN = f.read()

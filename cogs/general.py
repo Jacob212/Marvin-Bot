@@ -1,7 +1,15 @@
 import re
 import discord
 from discord.ext import commands
-from sql import *
+from cogs.sql import *
+
+f = open("GENRES.txt","r")
+genres = f.readlines()
+f.close()
+allGenres = []
+for genre in genres:
+  genre = genre.rstrip("\n")
+  allGenres.append(genre.lower())
 
 class arrowPages():
   def __init__(self,client,context,args):
@@ -13,15 +21,17 @@ class arrowPages():
     self.title = "%"
     self.genre = "%"
     self.year = "%"
+    self.description = ""
     genres = []
     title = []
+    descriptionList = []
     for arg in args:
       if arg.lower() == "tv":
         self.titleType = "tvSeries"
       elif arg.lower() == "movie":
         self.titleType = "movie"
       elif re.match("(<@!?)[0-9]*(>)",arg):
-        self.id = re.findall("\d+",arg)[0]
+        self.id = int(re.findall("\d+",arg)[0])
         self.mention = arg
       elif arg in allGenres:
         genres.append(arg)
@@ -32,6 +42,12 @@ class arrowPages():
     genres.sort()
     self.title = f'%{" ".join(title)}%'
     self.genre = f'%{"%".join(genres)}%'
+    if title != []:
+      descriptionList.append(f'Search for {" ".join(title)}')
+    if genres != []:
+      descriptionList.append(f'Filted by {", ".join(genres)}')
+    if descriptionList != []:
+      self.description = " and ".join(descriptionList)
 
   async def display(self,header=None):
     page = 1
@@ -39,16 +55,16 @@ class arrowPages():
       if str(self.context.command) == "list":
         display_episode = "Episodes"
         self.movies = getMoviesLikeLimit(self.title,self.titleType,self.genre,self.year,(page-1)*10)
-        embed = discord.Embed(title="Listing titles in database",color=self.context.message.author.color.value)
+        embed = discord.Embed(title="Listing titles in database",description=self.description,color=self.context.message.author.color.value)
       elif str(self.context.command) == "watched":
         display_episode = "Episode"
         if self.id is None:
           self.movies = getWatchedID(self.context.message.author.id,self.title,self.titleType,self.genre,self.year,(page-1)*10)
-          embed = discord.Embed(title="Listing titles watched by "+self.context.message.author.display_name,color=self.context.message.author.color.value)
+          embed = discord.Embed(title="Listing titles watched by "+self.context.message.author.display_name,description=self.description,color=self.context.message.author.color.value)
         else:
-          member = discord.utils.get(self.context.message.server.members, id=self.id)
+          member = self.client.get_user(self.id)
           self.movies = getWatchedID(self.id,self.title,self.titleType,self.genre,self.year,(page-1)*10)
-          embed = discord.Embed(title="Listing titles watched by "+member.display_name,color=self.context.message.author.color.value)
+          embed = discord.Embed(title="Listing titles watched by "+member.display_name,description=self.description,color=self.context.message.author.color.value)
       message = ""
       count = 0
       if self.movies != []:
